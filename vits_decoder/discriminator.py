@@ -14,26 +14,26 @@ class DiscriminatorS(tf.Module):
         super(DiscriminatorS, self).__init__()
         self.convs = [
             tfa.layers.WeightNormalization(tf.keras.layers.Conv1D(#1, 
-            16, 15, 1, padding='valid')),
+            16, 15, 1, padding='same')),
             tfa.layers.WeightNormalization(tf.keras.layers.Conv1D(#16,
-             64, 41, 4, groups=4, padding='valid')),
+             64, 41, 4, groups=4, padding='same')),
             tfa.layers.WeightNormalization(tf.keras.layers.Conv1D(#64,
-             256, 41, 4, groups=16, padding='valid')),
+             256, 41, 4, groups=16, padding='same')),
             tfa.layers.WeightNormalization(tf.keras.layers.Conv1D(#256,
-             1024, 41, 4, groups=64, padding='valid')),
+             1024, 41, 4, groups=64, padding='same')),
             tfa.layers.WeightNormalization(tf.keras.layers.Conv1D(#1024, 
-            1024, 41, 4, groups=256, padding='valid')),
+            1024, 41, 4, groups=256, padding='same')),
             tfa.layers.WeightNormalization(tf.keras.layers.Conv1D(#1024,
-             1024, 5, 1, padding='valid')),
+             1024, 5, 1, padding='same')),
         ]
         self.conv_post = tfa.layers.WeightNormalization(tf.keras.layers.Conv1D(#1024,
-             1, 3, 1, padding='valid'))
+             1, 3, 1, padding='same'))
 
     def __call__(self, x):
         fmap = []
         for l in self.convs:
             x = l(x)
-            x = tf.keras.layers.LeakyReLU(x, 0.1)
+            #x = tf.keras.layers.LeakyReLU(x, 0.1)
             fmap.append(x)
         x = self.conv_post(x)
         fmap.append(x)

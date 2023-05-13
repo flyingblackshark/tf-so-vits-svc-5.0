@@ -31,12 +31,12 @@ class WN(tf.keras.Model):
         self.drop = tf.keras.layers.Dropout(p_dropout)
 
         if gin_channels != 0:
-            cond_layer = tf.keras.layers.Conv1D(
+            self.cond_layer = tf.keras.layers.Conv1D(
                # gin_channels,
-                2 * hidden_channels * n_layers, 1
+                2 * hidden_channels * n_layers, kernel_size=1
             )
-            self.cond_layer = tfa.layers.WeightNormalization(cond_layer, name="weight")
-
+            #self.cond_layer = tfa.layers.WeightNormalization(cond_layer)
+            
         for i in range(n_layers):
             dilation = dilation_rate**i
             #padding = int((kernel_size * dilation - dilation) / 2)
@@ -48,7 +48,7 @@ class WN(tf.keras.Model):
                 padding='same'
                 #padding=padding,
             )
-            in_layer = tfa.layers.WeightNormalization(in_layer, name="weight")
+            in_layer = tfa.layers.WeightNormalization(in_layer)
             self.in_layers.append(in_layer)
 
             # last one is not necessary
@@ -58,7 +58,7 @@ class WN(tf.keras.Model):
                 res_skip_channels = hidden_channels
 
             res_skip_layer = tf.keras.layers.Conv1D(res_skip_channels, 1)
-            res_skip_layer = tfa.layers.WeightNormalization(res_skip_layer, name="weight")
+            res_skip_layer = tfa.layers.WeightNormalization(res_skip_layer)
             self.res_skip_layers.append(res_skip_layer)
 
     def call(self, x, x_mask, g=None, **kwargs):
@@ -73,14 +73,14 @@ class WN(tf.keras.Model):
         for i in range(self.n_layers):
             temp = tf.transpose(x,[0,2,1])
             x_in = self.in_layers[i](temp)
-            x_in = tf.transpose(x_in,[0,2,1])
+            temp = tf.transpose(x_in,[0,2,1])
             if g is not None:
                 cond_offset = i * 2 * self.hidden_channels
                 g_l = g[:, cond_offset : cond_offset + 2 * self.hidden_channels, :]
             else:
-                g_l = tf.zeros_like(x_in)
+                g_l = tf.zeros_like(temp)
 
-            acts = fused_add_tanh_sigmoid_multiply(x_in, g_l, n_channels_tensor)
+            acts = fused_add_tanh_sigmoid_multiply(temp, g_l, n_channels_tensor)
             acts = self.drop(acts)
             acts = tf.transpose(acts,[0,2,1])
             res_skip_acts = self.res_skip_layers[i](acts)

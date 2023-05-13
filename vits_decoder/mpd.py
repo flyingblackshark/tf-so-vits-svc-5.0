@@ -17,18 +17,18 @@ class DiscriminatorP(tf.keras.Model):
 
         self.convs = [
             tfa.layers.WeightNormalization(tf.keras.layers.Conv2D(#1, 
-            64, (kernel_size, 1), (stride, 1), padding='valid')),
+            64, (kernel_size, 1), (stride, 1), padding='same')),
             tfa.layers.WeightNormalization(tf.keras.layers.Conv2D(#64, 
-            128, (kernel_size, 1), (stride, 1), padding='valid')),
+            128, (kernel_size, 1), (stride, 1), padding='same')),
             tfa.layers.WeightNormalization(tf.keras.layers.Conv2D(#128,
-             256, (kernel_size, 1), (stride, 1), padding='valid')),
+             256, (kernel_size, 1), (stride, 1), padding='same')),
             tfa.layers.WeightNormalization(tf.keras.layers.Conv2D(#256,
-             512, (kernel_size, 1), (stride, 1), padding='valid')),
+             512, (kernel_size, 1), (stride, 1), padding='same')),
             tfa.layers.WeightNormalization(tf.keras.layers.Conv2D(#512,
-             1024, (kernel_size, 1), 1, padding='valid')),
+             1024, (kernel_size, 1), 1, padding='same')),
         ]
         self.conv_post = tfa.layers.WeightNormalization(tf.keras.layers.Conv2D(#1024, 
-            1,(3, 1), 1, padding='valid'))
+            1,(3, 1), 1, padding='same'))
 
     def call(self, x):
         fmap = []
@@ -37,13 +37,14 @@ class DiscriminatorP(tf.keras.Model):
         b, c, t = x.shape
         if t % self.period != 0: # pad first
             n_pad = self.period - (t % self.period)
-            x = tf.pad(x, (0, n_pad), "reflect")
+            x = tf.pad(x, [(0,0),(0,0),(0, n_pad)], "reflect")
             t = t + n_pad
-        x = x.view(b, c, t // self.period, self.period)
+        #x = x.view(b, c, t // self.period, self.period)
+        x = tf.reshape(x, [b, c, t // self.period, self.period])
 
         for l in self.convs:
             x = l(x)
-            x = tf.keras.layers.LeakyReLU(x, self.LRELU_SLOPE)
+            #x = tf.keras.layers.LeakyReLU(x, self.LRELU_SLOPE)
             fmap.append(x)
         x = self.conv_post(x)
         fmap.append(x)

@@ -37,42 +37,42 @@ def spectral_de_normalize_torch(magnitudes):
 mel_basis = {}
 hann_window = {}
 
-@tf.function
-def spectrogram_torch(y, n_fft, sampling_rate, hop_size, win_size, center=False):
-    if tf.keras.backend.min(y) < -1.0:
-        print("min value is ", tf.keras.backend.min(y))
-    if tf.keras.backend.max(y) > 1.0:
-        print("max value is ", tf.keras.backend.max(y))
+# @tf.function
+# def spectrogram_torch(y, n_fft, sampling_rate, hop_size, win_size, center=False):
+#     if tf.keras.backend.min(y) < -1.0:
+#         print("min value is ", tf.keras.backend.min(y))
+#     if tf.keras.backend.max(y) > 1.0:
+#         print("max value is ", tf.keras.backend.max(y))
 
-    global hann_window
-    dtype_device = str(y.dtype) + "_" + str(y.device)
-    wnsize_dtype_device = str(win_size) + "_" + dtype_device
-    if wnsize_dtype_device not in hann_window:
-        hann_window[wnsize_dtype_device] = tf.signal.hann_window(win_size)
-    y = tf.expand_dims(y,1)
+#     global hann_window
+#     dtype_device = str(y.dtype) + "_" + str(y.device)
+#     wnsize_dtype_device = str(win_size) + "_" + dtype_device
+#     if wnsize_dtype_device not in hann_window:
+#         hann_window[wnsize_dtype_device] = tf.signal.hann_window(win_size)
+#     y = tf.expand_dims(y,1)
     
-    y = tf.pad(
-        y,#y.unsqueeze(1),
-        (int((n_fft - hop_size) / 2), int((n_fft - hop_size) / 2)),
-        mode="reflect",
-    )
-    y = tf.squeeze(y,1)
+#     y = tf.pad(
+#         y,#y.unsqueeze(1),
+#         (int((n_fft - hop_size) / 2), int((n_fft - hop_size) / 2)),
+#         mode="reflect",
+#     )
+#     y = tf.squeeze(y,1)
 
-    spec = tf.signal.stft(
-        y,
-        n_fft,
-        hop_length=hop_size,
-        win_length=win_size,
-        window=hann_window[wnsize_dtype_device],
-        center=center,
-        pad_mode="reflect",
-        normalized=False,
-        onesided=True,
-        return_complex=False,
-    )
+#     spec = tf.signal.stft(
+#         y,
+#         n_fft,
+#         hop_length=hop_size,
+#         win_length=win_size,
+#         window=hann_window[wnsize_dtype_device],
+#         center=center,
+#         pad_mode="reflect",
+#         normalized=False,
+#         onesided=True,
+#         return_complex=False,
+#     )
 
-    spec = tf.sqrt(spec.pow(2).sum(-1) + 1e-6)
-    return spec
+#     spec = tf.sqrt(spec.pow(2).sum(-1) + 1e-6)
+#     return spec
 
 
 def spec_to_mel_torch(spec, n_fft, num_mels, sampling_rate, fmin, fmax):

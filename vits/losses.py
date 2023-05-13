@@ -54,10 +54,10 @@ def kl_loss(z_p, logs_q, m_p, logs_p, total_logdet, z_mask):
 
     kl = logs_p - logs_q - 0.5
     kl += 0.5 * ((z_p - m_p) ** 2) * tf.exp(-2.0 * logs_p)
-    kl = tf.keras.backend.sum(kl * z_mask)
+    kl = tf.reduce_sum(kl * z_mask)
     # add total_logdet (Negative LL)
-    kl -= tf.keras.backend.sum(total_logdet)
-    l = kl / tf.keras.backend.sum(z_mask)
+    kl -= tf.reduce_sum(total_logdet)
+    l = kl / tf.reduce_sum(tf.cast(z_mask,dtype=tf.int32))
     return l
 
 

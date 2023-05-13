@@ -9,8 +9,8 @@
 # import torch.nn.functional as F
 import tensorflow as tf
 import tensorflow_addons as tfa
-
-def stft(x, fft_size, hop_size, win_length, window):
+import functools
+def stft(x, fft_size, hop_size, win_length):
     """Perform STFT and convert to magnitude spectrogram.
     Args:
         x (Tensor): Input signal tensor (B, T).
@@ -21,15 +21,21 @@ def stft(x, fft_size, hop_size, win_length, window):
     Returns:
         Tensor: Magnitude spectrogram (B, #frames, fft_size // 2 + 1).
     """
-    x_stft = tf.signal.stft(x, fft_size, hop_size, win_length, window, return_complex=False)
+    x_stft = tf.signal.stft(signals=x, frame_length=fft_size, frame_step=hop_size,fft_length=win_length,window_fn=functools.partial(tf.signal.hann_window, periodic=True))
     real = x_stft[..., 0]
     imag = x_stft[..., 1]
-
+    real=tf.cast(real,tf.float32)
+    imag=tf.cast(imag,tf.float32)
+    real=tf.squeeze(real,0)
+    imag=tf.squeeze(imag,0)
     # NOTE(kan-bayashi): clamp is needed to avoid nan or inf
-    return tf.sqrt(tf.clip_by_value(real ** 2 + imag ** 2, clip_value_min=1e-7)).transpose(2, 1)
+    temp = tf.sqrt(tf.clip_by_value(real ** 2 + imag ** 2, clip_value_min=1e-7,clip_value_max=tf.float32.max))
+    temp = tf.cast(temp,tf.float32)
+    return tf.transpose(temp,perm=[0,1,2])
+    
 
 
-class SpectralConvergengeLoss(tf.Module):
+class SpectralConvergengeLoss(tf.keras.Model):
     """Spectral convergence loss module."""
 
     def __init__(self):
@@ -47,14 +53,14 @@ class SpectralConvergengeLoss(tf.Module):
         return tf.norm(y_mag - x_mag) / tf.norm(y_mag)
 
 
-class LogSTFTMagnitudeLoss(tf.Module):
+class LogSTFTMagnitudeLoss(tf.keras.Model):
     """Log STFT magnitude loss module."""
 
     def __init__(self):
         """Initilize los STFT magnitude loss module."""
         super(LogSTFTMagnitudeLoss, self).__init__()
 
-    def forward(self, x_mag, y_mag):
+    def call(self, x_mag, y_mag):
         """Calculate forward propagation.
         Args:
             x_mag (Tensor): Magnitude spectrogram of predicted signal (B, #frames, #freq_bins).
@@ -62,23 +68,23 @@ class LogSTFTMagnitudeLoss(tf.Module):
         Returns:
             Tensor: Log STFT magnitude loss value.
         """
-        return tf.keras.losses.mean_absolute_error(tf.log(y_mag), tf.log(x_mag))
+        return tf.keras.losses.mean_absolute_error(tf.math.log(y_mag), tf.math.log(x_mag))
 
 
-class STFTLoss(tf.Module):
+class STFTLoss(tf.keras.Model):
     """STFT loss module."""
 
-    def __init__(self, fft_size=1024, shift_size=120, win_length=600, window="hann_window"):
+    def __init__(self, fft_size=1024, shift_size=120, win_length=600):#, window="hann_window"):
         """Initialize STFT loss module."""
         super(STFTLoss, self).__init__()
         self.fft_size = fft_size
         self.shift_size = shift_size
         self.win_length = win_length
-        self.window = getattr(tf.signal, window)(win_length)#.to(device)
+        #self.window = getattr(tf.signal, window)(win_length)#.to(device)
         self.spectral_convergenge_loss = SpectralConvergengeLoss()
         self.log_stft_magnitude_loss = LogSTFTMagnitudeLoss()
 
-    def __call__(self, x, y):
+    def call(self, x, y):
         """Calculate forward propagation.
         Args:
             x (Tensor): Predicted signal (B, T).
@@ -87,20 +93,20 @@ class STFTLoss(tf.Module):
             Tensor: Spectral convergence loss value.
             Tensor: Log STFT magnitude loss value.
         """
-        x_mag = stft(x, self.fft_size, self.shift_size, self.win_length, self.window)
-        y_mag = stft(y, self.fft_size, self.shift_size, self.win_length, self.window)
+        x_mag = stft(x=x, fft_size=self.fft_size, hop_size=self.shift_size, win_length=self.win_length)#, self.window)
+        y_mag = stft(x=y, fft_size=self.fft_size, hop_size=self.shift_size, win_length=self.win_length)#, self.window)
         sc_loss = self.spectral_convergenge_loss(x_mag, y_mag)
         mag_loss = self.log_stft_magnitude_loss(x_mag, y_mag)
 
         return sc_loss, mag_loss
 
 
-class MultiResolutionSTFTLoss(tf.Module):
+class MultiResolutionSTFTLoss(tf.keras.Model):
     """Multi resolution STFT loss module."""
 
     def __init__(self,
-                 resolutions,
-                 window="hann_window"):
+                 resolutions,):
+               #  window="hann_window"):
         """Initialize Multi resolution STFT loss module.
         Args:
             resolutions (list): List of (FFT size, hop size, window length).
@@ -109,9 +115,10 @@ class MultiResolutionSTFTLoss(tf.Module):
         super(MultiResolutionSTFTLoss, self).__init__()
         self.stft_losses = []#torch.nn.ModuleList()
         for fs, ss, wl in resolutions:
-            self.stft_losses += [STFTLoss( fs, ss, wl, window)]
+            #self.stft_losses += [STFTLoss(fs, ss, wl)]
+            self.stft_losses.append(STFTLoss(fs, ss, wl))
 
-    def __call__(self, x, y):
+    def call(self, x, y):
         """Calculate forward propagation.
         Args:
             x (Tensor): Predicted signal (B, T).
