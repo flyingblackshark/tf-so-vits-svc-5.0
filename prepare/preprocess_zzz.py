@@ -1,4 +1,4 @@
-from tqdm import tqdm
+#from tqdm import tqdm
 #from torch.utils.data import DataLoader
 from omegaconf import OmegaConf
 # from vits.data_utils import TextAudioSpeakerSet
