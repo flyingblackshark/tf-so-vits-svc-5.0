@@ -38,8 +38,8 @@ class TextEncoder(tf.keras.layers.Layer):
 
     def call(self, x, x_lengths, f0, training=False):
         x = tf.transpose(x, perm=[0,2,1])  # [b, h, t]
-        temp=tf.sequence_mask(x_lengths, x.shape[2])
-        x_mask = tf.cast(tf.expand_dims(temp, 1),dtype=tf.float64)
+        x_mask = tf.sequence_mask(x_lengths, x.shape[2])
+        x_mask = tf.expand_dims(x_mask, 1)
         x = tf.transpose(x,[0,2,1])
         pre = self.pre(x,training=training)
         x_mask = tf.expand_dims(x_mask,0)
@@ -136,7 +136,7 @@ class PosteriorEncoder(tf.keras.layers.Layer):
             out_channels * 2, 1)
 
     def call(self, x, x_lengths, g=None,training=False):
-        x_mask = tf.expand_dims(tf.sequence_mask(x_lengths, x.shape[2]), 1)
+        x_mask = tf.expand_dims(tf.sequence_mask(x_lengths, x.shape[1]), 1)
         x_mask =tf.expand_dims(x_mask,0)
         x_mask = tf.transpose(x_mask,[0,2,1])
         x = tf.transpose(x,[0,2,1])

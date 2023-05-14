@@ -51,12 +51,16 @@ class DiscriminatorR(tf.keras.layers.Layer):
         x = tf.squeeze(x,1)
        # x = tf.signal.stft(signals=x, frame_length=n_fft, frame_step=hop_length, fft_length=win_length,pad_end=False,window_fn=functools.partial(tf.signal.hann_window, periodic=True)) #[B, F, TT, 2]
         x = tf.signal.stft(signals=x, frame_length=win_length, frame_step=hop_length, fft_length=n_fft)
-        mag = tf.cast(x,dtype=tf.float32)
+
+        mag = tf.map_fn(complex_to_float,x,dtype=tf.float32)#tf.cast(x,dtype=tf.float32)
        # mag = tf.norm(x, ord=2, axis =-1) #[B, F, TT]
 
         return mag
 
-
+def complex_to_float(complex_num):
+    real = tf.cast(tf.math.real(complex_num),dtype=tf.float32)
+    imag = tf.cast(tf.math.imag(complex_num),dtype=tf.float32)
+    return tf.sqrt(real**2+imag**2)
 class MultiResolutionDiscriminator(tf.keras.layers.Layer):
     def __init__(self, hp):
         super(MultiResolutionDiscriminator, self).__init__()

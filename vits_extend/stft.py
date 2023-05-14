@@ -86,19 +86,19 @@ class TacotronSTFT(tf.Module):
         # self.register_buffer('mel_basis', mel_basis)
         # self.register_buffer('hann_window', hann_window)
 
-    def linear_spectrogram(self, y):
-        assert (tf.math.min(y.data) >= -1)
-        assert (tf.math.max(y.data) <= 1)
+    # def linear_spectrogram(self, y):
+    #     assert (tf.math.min(y.data) >= -1)
+    #     assert (tf.math.max(y.data) <= 1)
 
-        y = tf.pad(y.unsqueeze(1),
-                                    (int((self.n_fft - self.hop_size) / 2), int((self.n_fft - self.hop_size) / 2)),
-                                    mode='reflect')
-        y = y.squeeze(1)
-        spec = tf.signal.stft(y, self.n_fft, hop_length=self.hop_size, win_length=self.win_size, window=self.hann_window,
-                          center=self.center, pad_mode='reflect', normalized=False, onesided=True, return_complex=False)
-        spec = tf.norm(spec, p=2, dim=-1)
+    #     y = tf.pad(y.unsqueeze(1),
+    #                                 (int((self.n_fft - self.hop_size) / 2), int((self.n_fft - self.hop_size) / 2)),
+    #                                 mode='reflect')
+    #     y = y.squeeze(1)
+    #     spec = tf.signal.stft(y, self.n_fft, hop_length=self.hop_size, win_length=self.win_size, window=self.hann_window,
+    #                       center=self.center, pad_mode='reflect', normalized=False, onesided=True, return_complex=False)
+    #     spec = tf.norm(spec, p=2, dim=-1)
 
-        return spec
+    #     return spec
 
     def mel_spectrogram(self, y):
         """Computes mel-spectrograms from a batch of waves
