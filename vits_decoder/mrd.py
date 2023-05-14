@@ -5,7 +5,7 @@
 import functools
 import tensorflow as tf
 import tensorflow_addons as tfa
-class DiscriminatorR(tf.keras.Model):
+class DiscriminatorR(tf.keras.layers.Layer):
     def __init__(self, hp, resolution):
         super(DiscriminatorR, self).__init__()
 
@@ -57,7 +57,7 @@ class DiscriminatorR(tf.keras.Model):
         return mag
 
 
-class MultiResolutionDiscriminator(tf.keras.Model):
+class MultiResolutionDiscriminator(tf.keras.layers.Layer):
     def __init__(self, hp):
         super(MultiResolutionDiscriminator, self).__init__()
         self.resolutions = eval(hp.mrd.resolutions)

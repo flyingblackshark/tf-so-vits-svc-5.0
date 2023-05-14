@@ -37,7 +37,7 @@ def spectrogram_tf(y, n_fft, sampling_rate, hop_size, win_size):
         frame_length=win_size,
         #window=hann_window[wnsize_dtype_device],
         window_fn=tf.signal.hann_window,
-        pad_end=True
+        pad_end=False
        # center=center,
         #pad_mode="reflect",
        # normalized=False,

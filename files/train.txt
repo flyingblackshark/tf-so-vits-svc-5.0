@@ -1,0 +1,4 @@
+./data_svc/waves-32k/aurora/extra2.wav|./data_svc/specs/aurora/extra2.pt|./data_svc/pitch/aurora/extra2.pit.npy|./data_svc/whisper/aurora/extra2.ppg.npy|./data_svc/speaker/aurora/extra2.spk.npy
+./data_svc/waves-32k/aurora/extra3.wav|./data_svc/specs/aurora/extra3.pt|./data_svc/pitch/aurora/extra3.pit.npy|./data_svc/whisper/aurora/extra3.ppg.npy|./data_svc/speaker/aurora/extra3.spk.npy
+./data_svc/waves-32k/aurora/extra4.wav|./data_svc/specs/aurora/extra4.pt|./data_svc/pitch/aurora/extra4.pit.npy|./data_svc/whisper/aurora/extra4.ppg.npy|./data_svc/speaker/aurora/extra4.spk.npy
+./data_svc/waves-32k/aurora/extra5.wav|./data_svc/specs/aurora/extra5.pt|./data_svc/pitch/aurora/extra5.pit.npy|./data_svc/whisper/aurora/extra5.ppg.npy|./data_svc/speaker/aurora/extra5.spk.npy

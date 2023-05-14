@@ -90,7 +90,14 @@ def patch_batch(batch):
 class L1_Loss(tf.keras.losses.Loss):
     def call(self,y_pred,y_true):
         return tf.abs(tf.math.reduce_sum(y_true-y_pred))
-
+class D_Loss(tf.keras.losses.Loss):
+    def call(self,y_pred,y_true):
+        loss_d = 0.0
+        for (_, score_fake), (_, score_real) in zip(y_pred, y_true):
+            loss_d += tf.reduce_mean(tf.pow(score_real - 1.0, 2))
+            loss_d += tf.reduce_mean(tf.pow(score_fake, 2))
+            loss_d = loss_d / len(y_pred)
+        return loss_d
 def train(rank, args, chkpt_path, hp, hp_str):
     parsed_dataset = tf.data.TFRecordDataset("test.tfrecords").map(_parse_function)
     train_set = []
@@ -126,6 +133,7 @@ def train(rank, args, chkpt_path, hp, hp_str):
                         center=False)
     num_epochs = 201
     l1_loss_fn = L1_Loss()
+    d_loss_fn = D_Loss()
     # dataset_slice = []
     # ppg_slice = []
     # pit_slice = []
@@ -161,6 +169,7 @@ def train(rank, args, chkpt_path, hp, hp_str):
     #         spec_l_slice.append(spec_l)
     #         #dataset_slice.append({'ppg':ppg, 'pit':pit,'spec':spec,'spk':spk, 'ppg_l':ppg_l,'spec_l':spec_l})
     # new_datset = tf.data.Dataset.from_tensor_slices(zip(ppg_slice,pit_slice,spec_slice,spk_slice,ppg_l_slice,spec_l_slice))
+    model_g.compile()
     model_d.compile()
     for epoch in range(num_epochs):
         # epoch_loss_avg = tf.keras.metrics.Mean()
@@ -221,14 +230,14 @@ def train(rank, args, chkpt_path, hp, hp_str):
                 loss_kl_f = kl_loss(z_f, logs_q, m_p, logs_p, logdet_f, z_mask) * hp.train.c_kl
                 loss_kl_r = kl_loss(z_r, logs_p, m_q, logs_q, logdet_r, z_mask) * hp.train.c_kl
                 loss_g = score_loss + feat_loss + mel_loss + stft_loss + loss_kl_f
-                loss_g_test = score_loss + feat_loss + mel_loss  + loss_kl_f
+                #loss_g_test = score_loss + feat_loss + mel_loss  + loss_kl_f
             # gradients =tape.gradient(score_loss, model_g.trainable_variables,unconnected_gradients=tf.UnconnectedGradients.ZERO)
             # g_optimizer.apply_gradients(zip(gradients, model_g.trainable_weights))
             # gradients =tape.gradient(feat_loss, model_g.trainable_variables,unconnected_gradients=tf.UnconnectedGradients.ZERO)
             # g_optimizer.apply_gradients(zip(gradients, model_g.trainable_weights))
             # gradients = tape.gradient(mel_loss, model_g.trainable_variables,unconnected_gradients=tf.UnconnectedGradients.ZERO)
             # g_optimizer.apply_gradients(zip(gradients, model_g.trainable_weights))
-            gradients = tape.gradient(mel_loss, model_g.trainable_variables,unconnected_gradients=tf.UnconnectedGradients.ZERO)
+            gradients = tape.gradient(loss_g, model_g.trainable_variables,unconnected_gradients=tf.UnconnectedGradients.ZERO)
             g_optimizer.apply_gradients(zip(gradients, model_g.trainable_weights))
                 # Loss
            
@@ -240,13 +249,9 @@ def train(rank, args, chkpt_path, hp, hp_str):
                 res_fake, period_fake, dis_fake = model_d(fake_audio)
                 res_real, period_real, dis_real = model_d(audio)
 
-                loss_d = 0.0
-                for (_, score_fake), (_, score_real) in zip(res_fake + period_fake + dis_fake, res_real + period_real + dis_real):
-                    loss_d += tf.reduce_mean(tf.pow(score_real - 1.0, 2))
-                    loss_d += tf.reduce_mean(tf.pow(score_fake, 2))
-                loss_d = loss_d / len(res_fake + period_fake + dis_fake)
+                loss_d = d_loss_fn(res_fake + period_fake + dis_fake, res_real + period_real + dis_real)
                 tape.gradient(loss_d, model_d.trainable_variables,unconnected_gradients=tf.UnconnectedGradients.ZERO)
-                d_optimizer.apply_gradients(zip(gradients, model_g.trainable_weights))
+                d_optimizer.apply_gradients(zip(gradients, model_d.trainable_weights))
                 #loss_d.backward()
                 #clip_grad_value_(model_d.parameters(),  None)
             loss_g = loss_g

@@ -9,7 +9,7 @@ from .mrd import MultiResolutionDiscriminator
 import tensorflow as tf
 import tensorflow_addons as tfa
 
-class DiscriminatorS(tf.keras.Model):
+class DiscriminatorS(tf.keras.layers.Layer):
     def __init__(self):
         super(DiscriminatorS, self).__init__()
         self.convs = [
