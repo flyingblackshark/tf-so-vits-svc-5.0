@@ -5,7 +5,10 @@ import tensorflow_io as tfio
 from vits import spectrogram
 from vits import utils
 from omegaconf import OmegaConf
-
+def complex_to_float(complex_num):
+    real = tf.cast(tf.math.real(complex_num),dtype=tf.float32)
+    imag = tf.cast(tf.math.imag(complex_num),dtype=tf.float32)
+    return tf.sqrt(real**2+imag**2)
 def spectrogram_tf(y, n_fft, sampling_rate, hop_size, win_size):
     if tf.reduce_min(y) < -1.0:
         print("min value is ", tf.reduce_min(y))
@@ -19,10 +22,10 @@ def spectrogram_tf(y, n_fft, sampling_rate, hop_size, win_size):
     #     hann_window[wnsize_dtype_device] = torch.hann_window(win_size).to(
     #         dtype=y.dtype, device=y.device
     #     )
-
+    temp = tf.expand_dims(y,1)
     y = tf.pad(
-        tf.expand_dims(y,1),
-        (int((n_fft - hop_size) / 2), int((n_fft - hop_size) / 2)),
+        temp,
+        [(0,0),(0,0),(int((n_fft - hop_size) / 2), int((n_fft - hop_size) / 2))],
         mode="reflect",
     )
     y = tf.squeeze(y,1)
@@ -30,7 +33,7 @@ def spectrogram_tf(y, n_fft, sampling_rate, hop_size, win_size):
     spec = tf.signal.stft(
         signals = y,
         fft_length=n_fft,
-        hop_length=hop_size,
+        frame_step=hop_size,
         frame_length=win_size,
         #window=hann_window[wnsize_dtype_device],
         window_fn=tf.signal.hann_window,
@@ -42,8 +45,9 @@ def spectrogram_tf(y, n_fft, sampling_rate, hop_size, win_size):
        # return_complex=False,
     )
 
-    spec = tf.sqrt(tf.reduce_sum(tf.pow(spec,2),axis=-1) + 1e-6)
-    return spec
+    #spec = tf.sqrt(tf.reduce_sum(tf.pow(spec,2),axis=-1) + 1e-6)
+    new_spec = tf.map_fn(complex_to_float,spec,dtype=tf.float32)
+    return new_spec
 def compute_spec(hps, filename, specname):
     audio, sampling_rate = utils.load_wav_to_torch(filename)
     assert sampling_rate == hps.sampling_rate, f"{sampling_rate} is not {hps.sampling_rate}"

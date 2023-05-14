@@ -174,9 +174,9 @@ def train(rank, args, chkpt_path, hp, hp_str):
             pit = i[3]
             len_pit = pit.shape[0]
             len_ppg = ppg.shape[0]
-            len_spec = spec.shape[1]
+            #len_spec = spec.shape[1]
             len_min = min(len_pit,len_ppg)
-            len_min = min(len_min,len_spec)
+           # len_min = min(len_min,len_spec)
             pit = pit[:len_min]
             ppg = ppg[:len_min, :]
             spec = spec[:, :len_min]
