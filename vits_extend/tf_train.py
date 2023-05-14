@@ -126,6 +126,42 @@ def train(rank, args, chkpt_path, hp, hp_str):
                         center=False)
     num_epochs = 201
     l1_loss_fn = L1_Loss()
+    # dataset_slice = []
+    # ppg_slice = []
+    # pit_slice = []
+    # spec_slice = []
+    # spk_slice = []
+    # ppg_l_slice = []
+    # spec_l_slice = []
+    # for i in train_set:
+    #         spec = i[0]
+    #         audio =tf.reshape(i[1],[1,1,-1])
+    #         ppg = i[2]
+    #         pit = i[3]
+    #         len_pit = pit.shape[0]
+    #         len_ppg = ppg.shape[0]
+    #         len_spec = spec.shape[1]
+    #         len_min = min(len_pit,len_ppg)
+    #         len_min = min(len_min,len_spec)
+    #         pit = pit[:len_min]
+    #         ppg = ppg[:len_min, :]
+    #         spec = spec[:, :len_min]
+    #         pit = tf.expand_dims(pit,axis=0)
+    #         ppg = tf.expand_dims(ppg,axis=0)
+    #         spec = tf.expand_dims(spec,axis=0)
+    #         spk = tf.expand_dims(i[4],axis=0)
+    #         ppg_l = ppg.shape[1]
+    #         spec_l = spec.shape[2]
+    #         audio_l = audio.shape[2]
+    #         ppg_slice.append(ppg)
+    #         pit_slice.append(pit)
+    #         spec_slice.append(spec)
+    #         spk_slice.append(spk)
+    #         ppg_l_slice.append(ppg_l)
+    #         spec_l_slice.append(spec_l)
+    #         #dataset_slice.append({'ppg':ppg, 'pit':pit,'spec':spec,'spk':spk, 'ppg_l':ppg_l,'spec_l':spec_l})
+    # new_datset = tf.data.Dataset.from_tensor_slices(zip(ppg_slice,pit_slice,spec_slice,spk_slice,ppg_l_slice,spec_l_slice))
+    model_d.compile()
     for epoch in range(num_epochs):
         # epoch_loss_avg = tf.keras.metrics.Mean()
         # epoch_accuracy = tf.keras.metrics.SparseCategoricalAccuracy()
@@ -151,7 +187,7 @@ def train(rank, args, chkpt_path, hp, hp_str):
             ppg_l = ppg.shape[1]
             spec_l = spec.shape[2]
             audio_l = audio.shape[2]
-            
+            #dataset_slice.append([ppg, pit, spec, spk, ppg_l, spec_l])
             with tf.GradientTape(persistent=True) as tape:
                 fake_audio, ids_slice, z_mask, \
                     (z_f, z_r, z_p, m_p, logs_p, z_q, m_q, logs_q, logdet_f, logdet_r) = model_g(
