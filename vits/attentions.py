@@ -48,26 +48,33 @@ class Encoder(tf.keras.Model):
             )
             self.norm_layers_1.append(tf.keras.layers.LayerNormalization())
             self.ffn_layers.append(
-                tf.keras.Sequential(
-            [
-                tf.keras.layers.Dense(filter_channels, activation="relu"),
-             tf.keras.layers.Dense(hidden_channels),])
+            #     tf.keras.Sequential(
+            # [
+            #  tf.keras.layers.Dense(filter_channels, activation="relu"),
+            #  tf.keras.layers.Dense(hidden_channels),])
+            FFN(
+                  #  hidden_channels,
+                    hidden_channels,
+                    filter_channels,
+                    kernel_size,
+                    p_dropout=p_dropout,
+                )
             )
             self.norm_layers_2.append(tf.keras.layers.LayerNormalization())
 
-    def call(self, x, x_mask):
+    def call(self, x, x_mask,training=False):
         attn_mask = tf.expand_dims(x_mask,2) * tf.expand_dims(x_mask,-1)
         x = x * x_mask
         x=tf.transpose(x,[0,2,1])
         for i in range(self.n_layers):
-            y = self.attn_layers[i](query=x, value=x,key=x,attention_mask=attn_mask)
+            y = self.attn_layers[i](query=x, value=x,key=x,attention_mask=attn_mask,training=training)
             y = self.drop(y)
-            x = self.norm_layers_1[i](x + y)
+            x = self.norm_layers_1[i](x + y,training=training)
 
-            y = self.ffn_layers[i](x, x_mask)
+            y = self.ffn_layers[i](x, x_mask,training=training)
           
             y = self.drop(y)
-            x = self.norm_layers_2[i](x + y)      
+            x = self.norm_layers_2[i](x + y,training=training)      
         x=tf.transpose(x,[0,2,1])   
         x = x * x_mask
         return x
@@ -373,59 +380,69 @@ class Decoder(tf.Module):
 #         return tf.expand_dims(tf.expand_dims(-tf.math.log1p(tf.abs(diff)), 0), 0)
 
 
-# class FFN(tf.Module):
-#     def __init__(
-#         self,
-#         in_channels,
-#         out_channels,
-#         filter_channels,
-#         kernel_size,
-#         p_dropout=0.0,
-#         activation=None,
-#         causal=False,
-#     ):
-#         super().__init__()
-#         self.in_channels = in_channels
-#         self.out_channels = out_channels
-#         self.filter_channels = filter_channels
-#         self.kernel_size = kernel_size
-#         self.p_dropout = p_dropout
-#         self.activation = activation
-#         self.causal = causal
+class FFN(tf.keras.Model):
+    def __init__(
+        self,
+       # in_channels,
+        out_channels,
+        filter_channels,
+        kernel_size,
+        p_dropout=0.0,
+        activation=None,
+        causal=False,
+    ):
+        super().__init__()
+      #  self.in_channels = in_channels
+        self.out_channels = out_channels
+        self.filter_channels = filter_channels
+        self.kernel_size = kernel_size
+        self.p_dropout = p_dropout
+        self.activation = activation
+        self.causal = causal
 
-#         if causal:
-#             self.padding = self._causal_padding
-#         else:
-#             self.padding = self._same_padding
+        if causal:
+            self.padding = 'causal'
+        else:
+            self.padding = 'same'
 
-#         self.conv_1 = tf.keras.layers.Conv1D(in_channels, filter_channels, kernel_size)
-#         self.conv_2 = tf.keras.layers.Conv1D(filter_channels, out_channels, kernel_size)
-#         self.drop = tf.keras.layers.Dropout(p_dropout)
+        self.conv_1 = tf.keras.layers.Conv1D(filter_channels, kernel_size,padding=self.padding)
+        self.conv_2 = tf.keras.layers.Conv1D(out_channels, kernel_size,padding=self.padding)
+        self.drop = tf.keras.layers.Dropout(p_dropout)
 
-#     def forward(self, x, x_mask):
-#         x = self.conv_1(self.padding(x * x_mask))
-#         if self.activation == "gelu":
-#             x = x * tf.sigmoid(1.702 * x)
-#         else:
-#             x = tf.keras.activations.relu(x)
-#         x = self.drop(x)
-#         x = self.conv_2(self.padding(x * x_mask))
-#         return x * x_mask
+    def call(self, x, x_mask,training=False):
+        x=tf.transpose(x,[0,2,1])
+        temp = x * x_mask
+        temp=tf.transpose(temp,[0,2,1])
+        x = self.conv_1(temp,training=training)
+       
+        if self.activation == "gelu":
+            x = x * tf.sigmoid(1.702 * x)
+        else:
+            x = tf.keras.layers.ReLU()(x)
+        x = self.drop(x)
+        x=tf.transpose(x,[0,2,1])
+        temp = x * x_mask
+        temp=tf.transpose(temp,[0,2,1])
+        x = self.conv_2(temp,training=training)
+        x=tf.transpose(x,[0,2,1])
+        temp = x * x_mask
+        temp=tf.transpose(temp,[0,2,1])
+        return temp
 
-#     def _causal_padding(self, x):
-#         if self.kernel_size == 1:
-#             return x
-#         pad_l = self.kernel_size - 1
-#         pad_r = 0
-#         padding = [[0, 0], [0, 0], [pad_l, pad_r]]
-#         x = tf.pad(x, commons.convert_pad_shape(padding))
-#         return x
+    # def _causal_padding(self, x):
+    #     if self.kernel_size == 1:
+    #         return x
+    #     pad_l = self.kernel_size - 1
+    #     pad_r = 0
+    #     padding = [[0, 0], [0, 0], [pad_l, pad_r]]
+    #     x = tf.pad(x, commons.convert_pad_shape(padding))
+    #     return x
 
-#     def _same_padding(self, x):
-#         if self.kernel_size == 1:
-#             return x
-#         pad_l = (self.kernel_size - 1) // 2
-#         pad_r = self.kernel_size // 2
-#         padding = [[0, 0], [0, 0], [pad_l, pad_r]]
-#         x = tf.pad(x, commons.convert_pad_shape(padding))
-#         return x
+    # def _same_padding(self, x):
+    #     if self.kernel_size == 1:
+    #         return x
+    #     pad_l = (self.kernel_size - 1) // 2
+    #     pad_r = self.kernel_size // 2
+    #     padding = [[0, 0], [0, 0], [pad_l, pad_r]]
+    #     x = tf.pad(x, commons.convert_pad_shape(padding))
+    #     return x

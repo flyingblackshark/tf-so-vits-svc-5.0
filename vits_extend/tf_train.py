@@ -89,6 +89,7 @@ def patch_batch(batch):
     )
 def l1_loss(y_pred,y_true):
     return tf.abs(tf.math.reduce_sum(y_true-y_pred))
+
 def train(rank, args, chkpt_path, hp, hp_str):
     parsed_dataset = tf.data.TFRecordDataset("test.tfrecords").map(_parse_function)
     train_set = []
@@ -110,10 +111,10 @@ def train(rank, args, chkpt_path, hp, hp_str):
         hp)
     
     model_d=Discriminator(hp)
-    d_optimizer=tf.keras.optimizers.AdamW(learning_rate=0.0003)
-    g_optimizer=tf.keras.optimizers.AdamW(learning_rate=0.0003)
+    d_optimizer=tf.keras.optimizers.AdamW(learning_rate=hp.train.learning_rate, beta_1=hp.train.betas[0],beta_2=hp.train.betas[1], epsilon=hp.train.eps)
+    g_optimizer=tf.keras.optimizers.AdamW(learning_rate=hp.train.learning_rate, beta_1=hp.train.betas[0],beta_2=hp.train.betas[1], epsilon=hp.train.eps)
     stft_criterion = MultiResolutionSTFTLoss(eval(hp.mrd.resolutions))
-
+    
     stft = TacotronSTFT(filter_length=hp.data.filter_length,
                         hop_length=hp.data.hop_length,
                         win_length=hp.data.win_length,
@@ -122,21 +123,11 @@ def train(rank, args, chkpt_path, hp, hp_str):
                         mel_fmin=hp.data.mel_fmin,
                         mel_fmax=hp.data.mel_fmax,
                         center=False)
-    loss_object = tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True)
-    def loss(model, x, y, training):
-        # training=training is needed only if there are layers with different
-        # behavior during training versus inference (e.g. Dropout).
-        y_ = model(x, training=training)
-        return loss_object(y_true=y, y_pred=y_)
-    def grad(model, inputs, targets):
-        with tf.GradientTape() as tape:
-            loss_value = loss(model, inputs, targets, training=True)
-            return loss_value, tape.gradient(loss_value, model.trainable_variables)
     num_epochs = 201
-
+    loss_fn = tf.keras.losses.MeanSquaredError()
     for epoch in range(num_epochs):
-        epoch_loss_avg = tf.keras.metrics.Mean()
-        epoch_accuracy = tf.keras.metrics.SparseCategoricalAccuracy()
+        # epoch_loss_avg = tf.keras.metrics.Mean()
+        # epoch_accuracy = tf.keras.metrics.SparseCategoricalAccuracy()
 
         # Training loop - using batches of 32
         for i in train_set:
@@ -163,13 +154,15 @@ def train(rank, args, chkpt_path, hp, hp_str):
             with tf.GradientTape(persistent=False) as tape:
                 fake_audio, ids_slice, z_mask, \
                     (z_f, z_r, z_p, m_p, logs_p, z_q, m_q, logs_q, logdet_f, logdet_r) = model_g(
-                        ppg, pit, spec, spk, ppg_l, spec_l)
+                        ppg, pit, spec, spk, ppg_l, spec_l,training=True)
                 audio = commons.slice_segments(
                     audio, ids_slice * hp.data.hop_length, hp.data.segment_size)  # slice
                 mel_fake = stft.mel_spectrogram(tf.expand_dims(fake_audio,1))
                 mel_real = stft.mel_spectrogram(tf.expand_dims(audio,1))
                 mel_loss = l1_loss(mel_fake, mel_real) * hp.train.c_mel
-            tape.gradient(mel_loss, model_g.trainable_variables)
+                test_mel_loss = loss_fn(mel_fake, mel_real) * hp.train.c_mel
+            gradients = tape.gradient(test_mel_loss, model_g.trainable_variables)
+            d_optimizer.apply_gradients(zip(gradients, model_g.trainable_weights))
             with tf.GradientTape(persistent=False) as tape:
                 sc_loss, mag_loss = stft_criterion(tf.expand_dims(fake_audio,1), tf.expand_dims(audio,1))
                 stft_loss = (sc_loss + mag_loss) * hp.train.c_stft
@@ -180,7 +173,8 @@ def train(rank, args, chkpt_path, hp, hp_str):
                     score_loss += tf.math.reduce_mean(tf.pow(score_fake - 1.0, 2))
                 score_loss = score_loss / len(res_fake + period_fake + dis_fake)
                 res_real, period_real, dis_real = model_d(audio)
-            tape.gradient(score_loss, model_g.trainable_variables)
+            gradients =tape.gradient(score_loss, model_g.trainable_variables)
+            d_optimizer.apply_gradients(zip(gradients, model_g.trainable_weights))
             with tf.GradientTape(persistent=False) as tape:
                 feat_loss = 0.0
                 for (feat_fake, _), (feat_real, _) in zip(res_fake + period_fake + dis_fake, res_real + period_real + dis_real):
@@ -188,12 +182,14 @@ def train(rank, args, chkpt_path, hp, hp_str):
                         feat_loss += tf.math.reduce_mean(tf.abs(fake - real))
                 feat_loss = feat_loss / len(res_fake + period_fake + dis_fake)
                 feat_loss = feat_loss * 2
-            tape.gradient(feat_loss, model_g.trainable_variables)
+            gradients =tape.gradient(feat_loss, model_g.trainable_variables)
+            d_optimizer.apply_gradients(zip(gradients, model_g.trainable_weights))
             with tf.GradientTape(persistent=False) as tape:
                 loss_kl_f = kl_loss(z_f, logs_q, m_p, logs_p, logdet_f, z_mask) * hp.train.c_kl
                 loss_kl_r = kl_loss(z_r, logs_p, m_q, logs_q, logdet_r, z_mask) * hp.train.c_kl
                 loss_g = score_loss + feat_loss + mel_loss + stft_loss + loss_kl_f
-            tape.gradient(loss_kl_f, model_g.trainable_variables)
+            gradients = tape.gradient(loss_kl_f, model_g.trainable_variables)
+            d_optimizer.apply_gradients(zip(gradients, model_g.trainable_weights))
                 # Loss
            
                 

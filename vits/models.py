@@ -13,7 +13,7 @@ import vits.modules
 
 class TextEncoder(tf.keras.Model):
     def __init__(self,
-                 in_channels,
+              #   in_channels,
                  out_channels,
                  hidden_channels,
                  filter_channels,
@@ -36,12 +36,12 @@ class TextEncoder(tf.keras.Model):
             p_dropout)
         self.proj = tf.keras.layers.Conv1D(out_channels * 2, 1)
 
-    def call(self, x, x_lengths, f0):
+    def call(self, x, x_lengths, f0, training=False):
         x = tf.transpose(x, perm=[0,2,1])  # [b, h, t]
         temp=tf.sequence_mask(x_lengths, x.shape[2])
         x_mask = tf.cast(tf.expand_dims(temp, 1),dtype=tf.float64)
         x = tf.transpose(x,[0,2,1])
-        pre = self.pre(x)
+        pre = self.pre(x,training=training)
         x_mask = tf.expand_dims(x_mask,0)
         x_mask = tf.transpose(x_mask,[0,2,1])
         x_mask = tf.cast(x_mask,tf.float32)
@@ -49,12 +49,12 @@ class TextEncoder(tf.keras.Model):
         x = pre * x_mask
        
         #x = tf.transpose(x,[0,2,1])
-        x = x + tf.transpose(self.pit(f0),[0,2,1])
+        x = x + tf.transpose(self.pit(f0,training=training),[0,2,1])
         #x=tf.transpose(x,[0,2,1])
-        x = self.enc(x * x_mask, x_mask)
+        x = self.enc(x * x_mask, x_mask,training=training)
         #x = x + tf.transpose(self.pit(f0),[0,2,1])
         x=tf.transpose(x,[0,2,1])
-        temp = self.proj(x)
+        temp = self.proj(x,training=training)
         temp=tf.transpose(temp,[0,2,1])
         stats = temp * x_mask
         m, logs = tf.split(stats,2,axis=1) #self.out_channels, axis=1)
@@ -91,29 +91,29 @@ class ResidualCouplingBlock(tf.keras.Model):
             )
             self.flows.append(vits.modules.Flip())
 
-    def call(self, x, x_mask, g=None, reverse=False):
+    def call(self, x, x_mask, g=None, reverse=False,training=False):
         if not reverse:
             total_logdet = 0
             for flow in self.flows:
-                x, log_det = flow(x, x_mask, g=g, reverse=reverse)
+                x, log_det = flow(x, x_mask, g=g, reverse=reverse,training=training)
                 total_logdet += log_det
             return x, total_logdet
         else:
             total_logdet = 0
             for flow in reversed(self.flows):
-                x, log_det = flow(x, x_mask, g=g, reverse=reverse)
+                x, log_det = flow(x, x_mask, g=g, reverse=reverse,training=training)
                 total_logdet += log_det
             return x, total_logdet
 
-    def remove_weight_norm(self):
-        for i in range(self.n_flows):
-            self.flows[i * 2].remove_weight_norm()
+    # def remove_weight_norm(self):
+    #     for i in range(self.n_flows):
+    #         self.flows[i * 2].remove_weight_norm()
 
 
 class PosteriorEncoder(tf.keras.Model):
     def __init__(
         self,
-        in_channels,
+    #    in_channels,
         out_channels,
         hidden_channels,
         kernel_size,
@@ -135,20 +135,20 @@ class PosteriorEncoder(tf.keras.Model):
             #hidden_channels, 
             out_channels * 2, 1)
 
-    def call(self, x, x_lengths, g=None):
+    def call(self, x, x_lengths, g=None,training=False):
         x_mask = tf.expand_dims(tf.sequence_mask(x_lengths, x.shape[2]), 1)
         x_mask =tf.expand_dims(x_mask,0)
         x_mask = tf.transpose(x_mask,[0,2,1])
         x = tf.transpose(x,[0,2,1])
-        temp = self.pre(x)
+        temp = self.pre(x,training=training)
         temp = tf.transpose(temp,[0,2,1])
         x_mask=tf.cast(x_mask,dtype=tf.float32)
         x = temp * x_mask
 
         #x = tf.transpose(x,[0,2,1])
-        x = self.enc(x, x_mask, g=g)
+        x = self.enc(x, x_mask, g=g,training=training)
         x = tf.transpose(x,[0,2,1])
-        temp = self.proj(x)
+        temp = self.proj(x,training=training)
         temp = tf.transpose(temp,[0,2,1])
         stats = temp * x_mask
         #stats = tf.transpose(stats,[0,2,1])
@@ -172,7 +172,7 @@ class SynthesizerTrn(tf.keras.Model):
         self.segment_size = segment_size
         self.emb_g = tf.keras.layers.Dense(hp.vits.gin_channels)
         self.enc_p = TextEncoder(
-            hp.vits.ppg_dim,
+            #hp.vits.ppg_dim,
             hp.vits.inter_channels,
             hp.vits.hidden_channels,
             hp.vits.filter_channels,
@@ -182,7 +182,7 @@ class SynthesizerTrn(tf.keras.Model):
             0.1,
         )
         self.enc_q = PosteriorEncoder(
-            spec_channels,
+            #spec_channels,
             hp.vits.inter_channels,
             hp.vits.hidden_channels,
             5,
@@ -200,31 +200,31 @@ class SynthesizerTrn(tf.keras.Model):
         )
         self.dec = Generator(hp=hp)
 
-    def call(self, ppg, pit, spec, spk, ppg_l, spec_l):
+    def call(self, ppg, pit, spec, spk, ppg_l, spec_l, training=False):
         g = tf.expand_dims(self.emb_g(tf.keras.utils.normalize(spk)),-1)
         z_p, m_p, logs_p, ppg_mask = self.enc_p(
-            ppg, ppg_l, f0=f0_to_coarse(pit))
-        z_q, m_q, logs_q, spec_mask = self.enc_q(spec, spec_l, g=g)
+            ppg, ppg_l, f0=f0_to_coarse(pit),training=training)
+        z_q, m_q, logs_q, spec_mask = self.enc_q(spec, spec_l, g=g,training=training)
 
         z_slice, pit_slice, ids_slice = commons.rand_slice_segments_with_pitch(
             z_q, pit, spec_l, self.segment_size)
         
-        audio = self.dec(spk, z_slice, pit_slice)
+        audio = self.dec(spk, z_slice, pit_slice,training=training)
 
         # SNAC to flow
-        z_f, logdet_f = self.flow(z_q, spec_mask, g=spk)
-        z_r, logdet_r = self.flow(z_p, spec_mask, g=spk, reverse=True)
+        z_f, logdet_f = self.flow(z_q, spec_mask, g=spk,training=training)
+        z_r, logdet_r = self.flow(z_p, spec_mask, g=spk, reverse=True,training=training)
         return audio, ids_slice, spec_mask, (z_f, z_r, z_p, m_p, logs_p, z_q, m_q, logs_q, logdet_f, logdet_r)
 
     def infer(self, ppg, pit, spk, ppg_l):
         z_p, m_p, logs_p, ppg_mask = self.enc_p(
             ppg, ppg_l, f0=f0_to_coarse(pit))
-        z, _ = self.flow(z_p, ppg_mask, g=spk, reverse=True)
+        z, _ = self.flow(z_p, ppg_mask, g=spk, reverse=True,training=False)
         o = self.dec(spk, z * ppg_mask, f0=pit)
         return o
 
 
-class SynthesizerInfer(tf.Module):
+class SynthesizerInfer(tf.keras.Model):
     def __init__(
         self,
         spec_channels,
@@ -235,7 +235,7 @@ class SynthesizerInfer(tf.Module):
         self.segment_size = segment_size
         self.enc_p = TextEncoder(
             hp.vits.ppg_dim,
-            hp.vits.inter_channels,
+        #    hp.vits.inter_channels,
             hp.vits.hidden_channels,
             hp.vits.filter_channels,
             2,
@@ -253,9 +253,9 @@ class SynthesizerInfer(tf.Module):
         )
         self.dec = Generator(hp=hp)
 
-    def remove_weight_norm(self):
-        self.flow.remove_weight_norm()
-        self.dec.remove_weight_norm()
+    # def remove_weight_norm(self):
+    #     self.flow.remove_weight_norm()
+    #     self.dec.remove_weight_norm()
 
     def pitch2source(self, f0):
         return self.dec.pitch2source(f0)

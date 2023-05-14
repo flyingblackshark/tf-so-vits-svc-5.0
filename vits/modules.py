@@ -61,18 +61,18 @@ class WN(tf.keras.Model):
             res_skip_layer = tfa.layers.WeightNormalization(res_skip_layer)
             self.res_skip_layers.append(res_skip_layer)
 
-    def call(self, x, x_mask, g=None, **kwargs):
+    def call(self, x, x_mask, g=None, training=False):
         output = tf.zeros_like(x)
         n_channels_tensor = tf.cast([self.hidden_channels],dtype=tf.int32)
 
         if g is not None:
             g = tf.transpose(g,[0,2,1])
-            g = self.cond_layer(g)
+            g = self.cond_layer(g,training=training)
             g = tf.transpose(g,[0,2,1])
 
         for i in range(self.n_layers):
             temp = tf.transpose(x,[0,2,1])
-            x_in = self.in_layers[i](temp)
+            x_in = self.in_layers[i](temp,training=training)
             temp = tf.transpose(x_in,[0,2,1])
             if g is not None:
                 cond_offset = i * 2 * self.hidden_channels
@@ -83,7 +83,7 @@ class WN(tf.keras.Model):
             acts = fused_add_tanh_sigmoid_multiply(temp, g_l, n_channels_tensor)
             acts = self.drop(acts)
             acts = tf.transpose(acts,[0,2,1])
-            res_skip_acts = self.res_skip_layers[i](acts)
+            res_skip_acts = self.res_skip_layers[i](acts,training=training)
             res_skip_acts = tf.transpose(res_skip_acts,[0,2,1])
             
             if i < self.n_layers - 1:
@@ -140,24 +140,24 @@ class ResidualCouplingLayer(tf.keras.Model):
         # SNAC Speaker-normalized Affine Coupling Layer
         self.snac = tf.keras.layers.Conv1D(2 * self.half_channels, 1)
 
-    def call(self, x, x_mask, g=None, reverse=False):
+    def call(self, x, x_mask, g=None, reverse=False,training=False):
         temp = tf.expand_dims(g,-1)
         temp = tf.transpose(temp,[0,2,1])
-        speaker = self.snac(temp)
+        speaker = self.snac(temp,training=training)
         speaker = tf.transpose(speaker,[0,2,1])
         speaker_m, speaker_v = tf.split(speaker,2, axis=1)  # (B, half_channels, 1)
         x0, x1 = tf.split(x, [self.half_channels] * 2, 1)
         # x0 norm
         x0_norm = (x0 - speaker_m) * tf.exp(-speaker_v) * x_mask
         x0_norm = tf.transpose(x0_norm,[0,2,1])
-        temp = self.pre(x0_norm)
+        temp = self.pre(x0_norm,training=training)
         temp = tf.transpose(temp,[0,2,1])
         h =  temp * x_mask
         #h = tf.transpose(h,[0,2,1])
         # don't use global condition
-        h = self.enc(h, x_mask)
+        h = self.enc(h, x_mask,training=training)
         h = tf.transpose(h,[0,2,1])
-        temp = self.post(h)
+        temp = self.post(h,training=training)
         temp = tf.transpose(temp,[0,2,1])
         stats =  temp * x_mask
         if not self.mean_only:

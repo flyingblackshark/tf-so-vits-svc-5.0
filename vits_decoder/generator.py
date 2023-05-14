@@ -37,15 +37,16 @@ class SpeakerAdapter(tf.keras.Model):
         self.W_bias.kernel_initializer=tf.keras.initializers.Zeros()
         self.W_bias.bias_initializer=tf.keras.initializers.Zeros()
 
-    def call(self, x, speaker_embedding):
+    def call(self, x, speaker_embedding,training=False):
         #x = x.transpose(1, -1)
-        x = tf.transpose(x,[0,2,1])
+        #x = tf.transpose(x,[0,2,1])
         mean = tf.math.reduce_mean(x,axis=-1, keepdims=True)
         var = tf.math.reduce_mean(((x - mean) ** 2),axis=-1, keepdims=True)
         std = tf.sqrt(var + self.epsilon)
         y = (x - mean) / std
-        scale = self.W_scale(speaker_embedding)
-        bias = self.W_bias(speaker_embedding)
+        scale = self.W_scale(speaker_embedding,training=training)
+        bias = self.W_bias(speaker_embedding,training=training)
+        y =  tf.transpose(y,[0,2,1])
         y *= tf.expand_dims(scale,1)
         y += tf.expand_dims(bias,1)
         y = tf.transpose(y,[0,2,1])
@@ -127,15 +128,15 @@ class Generator(tf.keras.Model):
         # weight initialization
        # self.ups.apply(init_weights)
 
-    def call(self, spk, x, f0):
+    def call(self, spk, x, f0,training=False):
         # adapter
-        x = self.adapter(x, spk)
+        x = self.adapter(x, spk,training=training)
         # nsf
         f0 = f0[:, None]
         f0=tf.transpose(f0,[0,2,1])
-        f0 =self.f0_upsamp(f0)
+        f0 =self.f0_upsamp(f0,training=training)
         #f0 = tf.transpose(temp,[0,2,1])
-        har_source = self.m_source(f0)
+        har_source = self.m_source(f0,training=training)
         har_source = tf.transpose(har_source,[0,2,1])
         x=tf.transpose(x,[0,2,1])
         
