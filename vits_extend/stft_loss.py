@@ -21,7 +21,7 @@ def stft(x, fft_size, hop_size, win_length):
     Returns:
         Tensor: Magnitude spectrogram (B, #frames, fft_size // 2 + 1).
     """
-    x_stft = tf.signal.stft(signals=x, frame_length=fft_size, frame_step=hop_size,fft_length=win_length,window_fn=functools.partial(tf.signal.hann_window, periodic=True))
+    x_stft = tf.signal.stft(signals=x, frame_length=win_length, frame_step=hop_size,fft_length=fft_size,window_fn=functools.partial(tf.signal.hann_window, periodic=True))
     real = x_stft[..., 0]
     imag = x_stft[..., 1]
     real=tf.cast(real,tf.float32)
@@ -35,14 +35,14 @@ def stft(x, fft_size, hop_size, win_length):
     
 
 
-class SpectralConvergengeLoss(tf.keras.Model):
+class SpectralConvergengeLoss(tf.keras.losses.Loss):
     """Spectral convergence loss module."""
 
     def __init__(self):
         """Initilize spectral convergence loss module."""
         super(SpectralConvergengeLoss, self).__init__()
 
-    def __call__(self, x_mag, y_mag):
+    def call(self, x_mag, y_mag):
         """Calculate forward propagation.
         Args:
             x_mag (Tensor): Magnitude spectrogram of predicted signal (B, #frames, #freq_bins).
@@ -53,7 +53,7 @@ class SpectralConvergengeLoss(tf.keras.Model):
         return tf.norm(y_mag - x_mag) / tf.norm(y_mag)
 
 
-class LogSTFTMagnitudeLoss(tf.keras.Model):
+class LogSTFTMagnitudeLoss(tf.keras.losses.Loss):
     """Log STFT magnitude loss module."""
 
     def __init__(self):
@@ -93,7 +93,8 @@ class STFTLoss(tf.keras.Model):
             Tensor: Spectral convergence loss value.
             Tensor: Log STFT magnitude loss value.
         """
-        x_mag = stft(x=x, fft_size=self.fft_size, hop_size=self.shift_size, win_length=self.win_length)#, self.window)
+        
+        x_mag = stft(x-x, fft_size=self.fft_size, hop_size=self.shift_size, win_length=self.win_length)#, self.window)
         y_mag = stft(x=y, fft_size=self.fft_size, hop_size=self.shift_size, win_length=self.win_length)#, self.window)
         sc_loss = self.spectral_convergenge_loss(x_mag, y_mag)
         mag_loss = self.log_stft_magnitude_loss(x_mag, y_mag)
@@ -137,4 +138,6 @@ class MultiResolutionSTFTLoss(tf.keras.losses.Loss):
         sc_loss /= len(self.stft_losses)
         mag_loss /= len(self.stft_losses)
 
-        return sc_loss, mag_loss
+       # return sc_loss, mag_loss
+        return sc_loss + mag_loss # for test purpose
+        

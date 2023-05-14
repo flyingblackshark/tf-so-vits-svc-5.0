@@ -87,8 +87,9 @@ def patch_batch(batch):
         wav_padded,
         wav_lengths,
     )
-def l1_loss(y_pred,y_true):
-    return tf.abs(tf.math.reduce_sum(y_true-y_pred))
+class L1_Loss(tf.keras.losses.Loss):
+    def call(self,y_pred,y_true):
+        return tf.abs(tf.math.reduce_sum(y_true-y_pred))
 
 def train(rank, args, chkpt_path, hp, hp_str):
     parsed_dataset = tf.data.TFRecordDataset("test.tfrecords").map(_parse_function)
@@ -124,7 +125,7 @@ def train(rank, args, chkpt_path, hp, hp_str):
                         mel_fmax=hp.data.mel_fmax,
                         center=False)
     num_epochs = 201
-    loss_fn = tf.keras.losses.MeanSquaredError()
+    l1_loss_fn = L1_Loss()
     for epoch in range(num_epochs):
         # epoch_loss_avg = tf.keras.metrics.Mean()
         # epoch_accuracy = tf.keras.metrics.SparseCategoricalAccuracy()
@@ -159,11 +160,14 @@ def train(rank, args, chkpt_path, hp, hp_str):
                     audio, ids_slice * hp.data.hop_length, hp.data.segment_size)  # slice
                 mel_fake = stft.mel_spectrogram(tf.expand_dims(fake_audio,1))
                 mel_real = stft.mel_spectrogram(tf.expand_dims(audio,1))
-                mel_loss = l1_loss(mel_fake, mel_real) * hp.train.c_mel
-                test_mel_loss = loss_fn(mel_fake, mel_real) * hp.train.c_mel
-           
-                sc_loss, mag_loss = stft_criterion(tf.expand_dims(fake_audio,1), tf.expand_dims(audio,1))
-                stft_loss = (sc_loss + mag_loss) * hp.train.c_stft
+                mel_loss = l1_loss_fn(mel_fake, mel_real) * hp.train.c_mel
+                #test_mel_loss = loss_fn(mel_fake, mel_real) * hp.train.c_mel
+                temp1 = tf.expand_dims(fake_audio,1)
+                temp2 =tf.expand_dims(audio,1)
+               # sc_loss, mag_loss = stft_criterion(temp1,temp2 )
+                sc_mag_loss = stft_criterion(temp1,temp2 )
+                #stft_loss = (sc_loss + mag_loss) * hp.train.c_stft
+                stft_loss = sc_mag_loss * hp.train.c_stft
                 #tape.gradient(stft_loss, model_g.trainable_variables)
                 res_fake, period_fake, dis_fake = model_d(fake_audio)
                 score_loss = 0.0
@@ -188,7 +192,7 @@ def train(rank, args, chkpt_path, hp, hp_str):
             # g_optimizer.apply_gradients(zip(gradients, model_g.trainable_weights))
             # gradients = tape.gradient(mel_loss, model_g.trainable_variables,unconnected_gradients=tf.UnconnectedGradients.ZERO)
             # g_optimizer.apply_gradients(zip(gradients, model_g.trainable_weights))
-            gradients = tape.gradient(test_mel_loss, model_g.trainable_variables,unconnected_gradients=tf.UnconnectedGradients.ZERO)
+            gradients = tape.gradient(mel_loss, model_g.trainable_variables,unconnected_gradients=tf.UnconnectedGradients.ZERO)
             g_optimizer.apply_gradients(zip(gradients, model_g.trainable_weights))
                 # Loss
            
