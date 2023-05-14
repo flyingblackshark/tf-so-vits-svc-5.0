@@ -178,7 +178,7 @@ import sys
 #         return cyc_noise, pulse_train, sine_wav, uv, noise
 
 
-class SineGen(tf.keras.Model):
+class SineGen(tf.keras.layers.Layer):
     """Definition of sine generator
     SineGen(samp_rate, harmonic_num = 0,
             sine_amp = 0.1, noise_std = 0.003,
@@ -281,10 +281,10 @@ class SineGen(tf.keras.Model):
             # get the sines
             sines = tf.cos(i_phase * 2 * np.pi)
         return sines
-    def mo(input_tensor, position=None, value=None):
-        input_tensor = input_tensor.numpy()
-        input_tensor[tuple(position)] = value
-        return input_tensor
+    # def mo(input_tensor, position=None, value=None):
+    #     input_tensor = input_tensor.numpy()
+    #     input_tensor[tuple(position)] = value
+    #     return input_tensor
     def call(self, f0):
         """sine_tensor, uv = forward(f0)
         input F0: tensor(batchsize=1, length, dim=1)
@@ -324,46 +324,46 @@ class SineGen(tf.keras.Model):
         return sine_waves
 
 
-class SourceModuleCycNoise_v1(tf.Module):
-    """SourceModuleCycNoise_v1
-    SourceModule(sampling_rate, noise_std=0.003, voiced_threshod=0)
-    sampling_rate: sampling_rate in Hz
+# class SourceModuleCycNoise_v1(tf.Module):
+#     """SourceModuleCycNoise_v1
+#     SourceModule(sampling_rate, noise_std=0.003, voiced_threshod=0)
+#     sampling_rate: sampling_rate in Hz
 
-    noise_std: std of Gaussian noise (default: 0.003)
-    voiced_threshold: threshold to set U/V given F0 (default: 0)
+#     noise_std: std of Gaussian noise (default: 0.003)
+#     voiced_threshold: threshold to set U/V given F0 (default: 0)
 
-    cyc, noise, uv = SourceModuleCycNoise_v1(F0_upsampled, beta)
-    F0_upsampled (batchsize, length, 1)
-    beta (1)
-    cyc (batchsize, length, 1)
-    noise (batchsize, length, 1)
-    uv (batchsize, length, 1)
-    """
+#     cyc, noise, uv = SourceModuleCycNoise_v1(F0_upsampled, beta)
+#     F0_upsampled (batchsize, length, 1)
+#     beta (1)
+#     cyc (batchsize, length, 1)
+#     noise (batchsize, length, 1)
+#     uv (batchsize, length, 1)
+#     """
 
-    def __init__(self, sampling_rate, noise_std=0.003, voiced_threshod=0):
-        super(SourceModuleCycNoise_v1, self).__init__()
-        self.sampling_rate = sampling_rate
-        self.noise_std = noise_std
-        self.l_cyc_gen = CyclicNoiseGen_v1(sampling_rate, noise_std, voiced_threshod)
+#     def __init__(self, sampling_rate, noise_std=0.003, voiced_threshod=0):
+#         super(SourceModuleCycNoise_v1, self).__init__()
+#         self.sampling_rate = sampling_rate
+#         self.noise_std = noise_std
+#         self.l_cyc_gen = CyclicNoiseGen_v1(sampling_rate, noise_std, voiced_threshod)
 
-    def forward(self, f0_upsamped, beta):
-        """
-        cyc, noise, uv = SourceModuleCycNoise_v1(F0, beta)
-        F0_upsampled (batchsize, length, 1)
-        beta (1)
-        cyc (batchsize, length, 1)
-        noise (batchsize, length, 1)
-        uv (batchsize, length, 1)
-        """
-        # source for harmonic branch
-        cyc, pulse, sine, uv, add_noi = self.l_cyc_gen(f0_upsamped, beta)
+#     def forward(self, f0_upsamped, beta):
+#         """
+#         cyc, noise, uv = SourceModuleCycNoise_v1(F0, beta)
+#         F0_upsampled (batchsize, length, 1)
+#         beta (1)
+#         cyc (batchsize, length, 1)
+#         noise (batchsize, length, 1)
+#         uv (batchsize, length, 1)
+#         """
+#         # source for harmonic branch
+#         cyc, pulse, sine, uv, add_noi = self.l_cyc_gen(f0_upsamped, beta)
 
-        # source for noise branch, in the same shape as uv
-        noise = tf.random.normal(uv) * self.noise_std / 3
-        return cyc, noise, uv
+#         # source for noise branch, in the same shape as uv
+#         noise = tf.random.normal(uv) * self.noise_std / 3
+#         return cyc, noise, uv
 
 
-class SourceModuleHnNSF(tf.keras.Model):
+class SourceModuleHnNSF(tf.keras.layers.Layer):
     """SourceModule for hn-nsf
     SourceModule(sampling_rate, harmonic_num=0, sine_amp=0.1,
                  add_noise_std=0.003, voiced_threshod=0)

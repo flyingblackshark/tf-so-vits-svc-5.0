@@ -100,7 +100,7 @@ class WN(tf.keras.Model):
                 #output=tf.transpose(output,[0,2,1])
         return output * x_mask
 
-class ResidualCouplingLayer(tf.keras.Model):
+class ResidualCouplingLayer(tf.keras.layers.Layer):
     def __init__(
         self,
         channels,
@@ -187,5 +187,5 @@ class ResidualCouplingLayer(tf.keras.Model):
                 * x_mask, [1, 2])
             return x, logdet
 
-    def remove_weight_norm(self):
-        self.enc.remove_weight_norm()
+    # def remove_weight_norm(self):
+    #     self.enc.remove_weight_norm()

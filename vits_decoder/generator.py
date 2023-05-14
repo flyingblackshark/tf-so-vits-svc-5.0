@@ -12,7 +12,7 @@ from .nsf import SourceModuleHnNSF
 from .bigv import init_weights, AMPBlock
 
 
-class SpeakerAdapter(tf.keras.Model):
+class SpeakerAdapter(tf.keras.layers.Layer):
 
     def __init__(self,
                  speaker_dim,
@@ -53,7 +53,7 @@ class SpeakerAdapter(tf.keras.Model):
         return y
 
 
-class Generator(tf.keras.Model):
+class Generator(tf.keras.layers.Layer):
     # this is our main BigVGAN model. Applies anti-aliased periodic activation for resblocks.
     def __init__(self, hp):
         super(Generator, self).__init__()

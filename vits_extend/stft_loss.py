@@ -101,7 +101,7 @@ class STFTLoss(tf.keras.Model):
         return sc_loss, mag_loss
 
 
-class MultiResolutionSTFTLoss(tf.keras.Model):
+class MultiResolutionSTFTLoss(tf.keras.losses.Loss):
     """Multi resolution STFT loss module."""
 
     def __init__(self,

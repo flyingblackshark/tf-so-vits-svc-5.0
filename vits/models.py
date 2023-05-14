@@ -11,7 +11,7 @@ from vits_decoder.generator import Generator
 import tensorflow as tf
 import vits.modules
 
-class TextEncoder(tf.keras.Model):
+class TextEncoder(tf.keras.layers.Layer):
     def __init__(self,
               #   in_channels,
                  out_channels,
@@ -64,7 +64,7 @@ class TextEncoder(tf.keras.Model):
         return z, m, logs, x_mask
 
 
-class ResidualCouplingBlock(tf.keras.Model):
+class ResidualCouplingBlock(tf.keras.layers.Layer):
     def __init__(
         self,
         channels,
@@ -110,7 +110,7 @@ class ResidualCouplingBlock(tf.keras.Model):
     #         self.flows[i * 2].remove_weight_norm()
 
 
-class PosteriorEncoder(tf.keras.Model):
+class PosteriorEncoder(tf.keras.layers.Layer):
     def __init__(
         self,
     #    in_channels,
@@ -157,8 +157,8 @@ class PosteriorEncoder(tf.keras.Model):
         z = (m + tf.random.normal(m.shape) * tf.exp(logs)) * x_mask
         return z, m, logs, x_mask
 
-    def remove_weight_norm(self):
-        self.enc.remove_weight_norm()
+    # def remove_weight_norm(self):
+    #     self.enc.remove_weight_norm()
 
 
 class SynthesizerTrn(tf.keras.Model):

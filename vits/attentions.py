@@ -9,7 +9,7 @@ from vits import commons
 #from vits.modules import LayerNorm
 
 
-class Encoder(tf.keras.Model):
+class Encoder(tf.keras.layers.Layer):
     def __init__(
         self,
         hidden_channels,
@@ -80,104 +80,104 @@ class Encoder(tf.keras.Model):
         return x
 
 
-class Decoder(tf.Module):
-    def __init__(
-        self,
-        hidden_channels,
-        filter_channels,
-        n_heads,
-        n_layers,
-        kernel_size=1,
-        p_dropout=0.0,
-        proximal_bias=False,
-        proximal_init=True,
-        **kwargs
-    ):
-        super().__init__()
-        self.hidden_channels = hidden_channels
-        self.filter_channels = filter_channels
-        self.n_heads = n_heads
-        self.n_layers = n_layers
-        self.kernel_size = kernel_size
-        self.p_dropout = p_dropout
-        self.proximal_bias = proximal_bias
-        self.proximal_init = proximal_init
+# class Decoder(tf.keras.layers.Layer):
+#     def __init__(
+#         self,
+#         hidden_channels,
+#         filter_channels,
+#         n_heads,
+#         n_layers,
+#         kernel_size=1,
+#         p_dropout=0.0,
+#         proximal_bias=False,
+#         proximal_init=True,
+#         **kwargs
+#     ):
+#         super().__init__()
+#         self.hidden_channels = hidden_channels
+#         self.filter_channels = filter_channels
+#         self.n_heads = n_heads
+#         self.n_layers = n_layers
+#         self.kernel_size = kernel_size
+#         self.p_dropout = p_dropout
+#         self.proximal_bias = proximal_bias
+#         self.proximal_init = proximal_init
 
-        self.drop = tf.keras.layers.Dropout(p_dropout)
-        self.self_attn_layers = []#nn.ModuleList()
-        self.norm_layers_0 = []#nn.ModuleList()
-        self.encdec_attn_layers = []#nn.ModuleList()
-        self.norm_layers_1 = []#nn.ModuleList()
-        self.ffn_layers = []#nn.ModuleList()
-        self.norm_layers_2 = []#nn.ModuleList()
-        for i in range(self.n_layers):
-            self.self_attn_layers.append(
-                tf.keras.layers.MultiHeadAttention(
-                    # hidden_channels,
-                    # hidden_channels,
-                    key_dim=0,
-                    num_heads=n_heads,
-                    dropout=p_dropout,
-                    # proximal_bias=proximal_bias,
-                    # proximal_init=proximal_init,
-                )
-            )
-            self.norm_layers_0.append(tf.keras.layers.LayerNormalization(
-                #hidden_channels
-                ))
-            self.encdec_attn_layers.append(
-                tf.keras.layers.MultiHeadAttention(
-                    #hidden_channels, hidden_channels, 
-                    key_dim=0,
-                    num_hedas=n_heads,
-                    dropout=p_dropout
-                )
-            )
-            self.norm_layers_1.append(tf.keras.layers.LayerNormalization(
-                #hidden_channels
-                ))
-            # self.ffn_layers.append(
-            #     FFN(
-            #         hidden_channels,
-            #         hidden_channels,
-            #         filter_channels,
-            #         kernel_size,
-            #         p_dropout=p_dropout,
-            #         causal=True,
-            #     )
-            # )
-            self.ffn_layers.append(tf.keras.Sequential(
-            [tf.keras.layers.Dense(hidden_channels, activation="relu"),
-             tf.keras.layers.Dense(filter_channels),])
-        )
-            self.norm_layers_2.append(tf.keras.layers.LayerNormalization(
-                #hidden_channels
-                 ))
+#         self.drop = tf.keras.layers.Dropout(p_dropout)
+#         self.self_attn_layers = []#nn.ModuleList()
+#         self.norm_layers_0 = []#nn.ModuleList()
+#         self.encdec_attn_layers = []#nn.ModuleList()
+#         self.norm_layers_1 = []#nn.ModuleList()
+#         self.ffn_layers = []#nn.ModuleList()
+#         self.norm_layers_2 = []#nn.ModuleList()
+#         for i in range(self.n_layers):
+#             self.self_attn_layers.append(
+#                 tf.keras.layers.MultiHeadAttention(
+#                     # hidden_channels,
+#                     # hidden_channels,
+#                     key_dim=0,
+#                     num_heads=n_heads,
+#                     dropout=p_dropout,
+#                     # proximal_bias=proximal_bias,
+#                     # proximal_init=proximal_init,
+#                 )
+#             )
+#             self.norm_layers_0.append(tf.keras.layers.LayerNormalization(
+#                 #hidden_channels
+#                 ))
+#             self.encdec_attn_layers.append(
+#                 tf.keras.layers.MultiHeadAttention(
+#                     #hidden_channels, hidden_channels, 
+#                     key_dim=0,
+#                     num_hedas=n_heads,
+#                     dropout=p_dropout
+#                 )
+#             )
+#             self.norm_layers_1.append(tf.keras.layers.LayerNormalization(
+#                 #hidden_channels
+#                 ))
+#             # self.ffn_layers.append(
+#             #     FFN(
+#             #         hidden_channels,
+#             #         hidden_channels,
+#             #         filter_channels,
+#             #         kernel_size,
+#             #         p_dropout=p_dropout,
+#             #         causal=True,
+#             #     )
+#             # )
+#             self.ffn_layers.append(tf.keras.Sequential(
+#             [tf.keras.layers.Dense(hidden_channels, activation="relu"),
+#              tf.keras.layers.Dense(filter_channels),])
+#         )
+#             self.norm_layers_2.append(tf.keras.layers.LayerNormalization(
+#                 #hidden_channels
+#                  ))
 
-    def forward(self, x, x_mask, h, h_mask):
-        """
-        x: decoder input
-        h: encoder output
-        """
-        self_attn_mask = commons.subsequent_mask(x_mask.size(2)).to(
-            device=x.device, dtype=x.dtype
-        )
-        encdec_attn_mask = h_mask.unsqueeze(2) * x_mask.unsqueeze(-1)
-        x = x * x_mask
-        for i in range(self.n_layers):
-            y = self.self_attn_layers[i](x, x, self_attn_mask)
-            y = self.drop(y)
-            x = self.norm_layers_0[i](x + y)
+#     def forward(self, x, x_mask, h, h_mask):
+#         """
+#         x: decoder input
+#         h: encoder output
+#         """
+#         self_attn_mask = commons.subsequent_mask(x_mask.size(2)).to(
+#             device=x.device, dtype=x.dtype
+#         )
+#         encdec_attn_mask = h_mask.unsqueeze(2) * x_mask.unsqueeze(-1)
+#         x = x * x_mask
+#         for i in range(self.n_layers):
+#             y = self.self_attn_layers[i](x, x, self_attn_mask)
+#             y = self.drop(y)
+#             x = self.norm_layers_0[i](x + y)
 
-            y = self.encdec_attn_layers[i](x, h, encdec_attn_mask)
-            y = self.drop(y)
-            x = self.norm_layers_1[i](x + y)
+#             y = self.encdec_attn_layers[i](x, h, encdec_attn_mask)
+#             y = self.drop(y)
+#             x = self.norm_layers_1[i](x + y)
 
-            y = self.ffn_layers[i](x, x_mask)
-            y = self.drop(y)
-            x = self.norm_layers_2[i](x + y)
-        x = x * x_mask
-        return x
+#             y = self.ffn_layers[i](x, x_mask)
+#             y = self.drop(y)
+#             x = self.norm_layers_2[i](x + y)
+#         x = x * x_mask
+#         return x
 
 
 # class MultiHeadAttention(tf.Module):
