@@ -8,10 +8,10 @@ from omegaconf import OmegaConf
 #from vits_extend.train import train
 from vits_extend.tf_train import train
 #torch.backends.cudnn.benchmark = True
-from tensorflow.python.ops.numpy_ops import np_config
+#from tensorflow.python.ops.numpy_ops import np_config
 
 if __name__ == '__main__':
-    np_config.enable_numpy_behavior()
+    #np_config.enable_numpy_behavior()
     parser = argparse.ArgumentParser()
     parser.add_argument('-c', '--config', type=str, default="configs/base.yaml",
                         help="yaml file for configuration")

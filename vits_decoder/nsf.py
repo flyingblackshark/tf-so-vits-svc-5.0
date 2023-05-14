@@ -217,7 +217,7 @@ class SineGen(tf.keras.Model):
     def _f02uv(self, f0):
         # generate uv signal
         uv = tf.ones_like(f0)
-        uv = uv * (f0 > self.voiced_threshold)
+        uv = uv * tf.cast((f0 > self.voiced_threshold),tf.float32)
         return uv
 
     def _f02sine(self, f0_values):
@@ -245,6 +245,7 @@ class SineGen(tf.keras.Model):
             # This will not change F0 of sine because (x-1) * 2*pi = x * 2*pi
             tmp_over_one = tf.cumsum(rad_values, 1) % 1
             tmp_over_one_idx = (tmp_over_one[:, 1:, :] - tmp_over_one[:, :-1, :]) < 0
+            tmp_over_one_idx = tf.cast(tmp_over_one_idx, tf.float32)
             cumsum_shift = tf.zeros_like(rad_values).numpy()
             cumsum_shift[:, 1:, :] = tmp_over_one_idx * -1.0
 

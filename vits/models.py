@@ -44,6 +44,7 @@ class TextEncoder(tf.keras.Model):
         pre = self.pre(x)
         x_mask = tf.expand_dims(x_mask,0)
         x_mask = tf.transpose(x_mask,[0,2,1])
+        x_mask = tf.cast(x_mask,tf.float32)
         pre = tf.transpose(pre,[0,2,1])
         x = pre * x_mask
        
@@ -57,7 +58,7 @@ class TextEncoder(tf.keras.Model):
         temp=tf.transpose(temp,[0,2,1])
         stats = temp * x_mask
         m, logs = tf.split(stats,2,axis=1) #self.out_channels, axis=1)
-        temp1 = tf.random.normal(m.shape,dtype=tf.float64)
+        temp1 = tf.random.normal(m.shape,dtype=tf.float32)
         temp2 = tf.exp(logs)
         z = (m + temp1 * temp2) * x_mask
         return z, m, logs, x_mask
@@ -141,6 +142,7 @@ class PosteriorEncoder(tf.keras.Model):
         x = tf.transpose(x,[0,2,1])
         temp = self.pre(x)
         temp = tf.transpose(temp,[0,2,1])
+        x_mask=tf.cast(x_mask,dtype=tf.float32)
         x = temp * x_mask
 
         #x = tf.transpose(x,[0,2,1])
@@ -152,7 +154,7 @@ class PosteriorEncoder(tf.keras.Model):
         #stats = tf.transpose(stats,[0,2,1])
         m, logs = tf.split(stats,2,axis=1)# self.out_channels, dim=1)
 
-        z = (m + tf.random.normal(m.shape,dtype=tf.float64) * tf.exp(logs)) * x_mask
+        z = (m + tf.random.normal(m.shape) * tf.exp(logs)) * x_mask
         return z, m, logs, x_mask
 
     def remove_weight_norm(self):

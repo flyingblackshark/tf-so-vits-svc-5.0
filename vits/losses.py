@@ -57,7 +57,7 @@ def kl_loss(z_p, logs_q, m_p, logs_p, total_logdet, z_mask):
     kl = tf.reduce_sum(kl * z_mask)
     # add total_logdet (Negative LL)
     kl -= tf.reduce_sum(total_logdet)
-    l = kl / tf.reduce_sum(tf.cast(z_mask,dtype=tf.int32))
+    l = kl / tf.reduce_sum(tf.cast(z_mask,dtype=tf.float32))
     return l
 
 

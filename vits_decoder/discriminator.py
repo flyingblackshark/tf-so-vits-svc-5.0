@@ -9,7 +9,7 @@ from .mrd import MultiResolutionDiscriminator
 import tensorflow as tf
 import tensorflow_addons as tfa
 
-class DiscriminatorS(tf.Module):
+class DiscriminatorS(tf.keras.Model):
     def __init__(self):
         super(DiscriminatorS, self).__init__()
         self.convs = [
@@ -29,7 +29,7 @@ class DiscriminatorS(tf.Module):
         self.conv_post = tfa.layers.WeightNormalization(tf.keras.layers.Conv1D(#1024,
              1, 3, 1, padding='same'))
 
-    def __call__(self, x):
+    def call(self, x):
         fmap = []
         for l in self.convs:
             x = l(x)
@@ -38,18 +38,18 @@ class DiscriminatorS(tf.Module):
         x = self.conv_post(x)
         fmap.append(x)
         #x = torch.flatten(x, 1, -1)
-        x = x.reshape([x.shape[0],-1])
+        x = tf.reshape(x,[x.shape[0],-1])
         return [(fmap, x)]
 
 
-class Discriminator(tf.Module):
+class Discriminator(tf.keras.Model):
     def __init__(self, hp):
         super(Discriminator, self).__init__()
         self.MRD = MultiResolutionDiscriminator(hp)
         self.MPD = MultiPeriodDiscriminator(hp)
         self.DIS = DiscriminatorS()
 
-    def __call__(self, x):
+    def call(self, x):
         return self.MRD(x), self.MPD(x), self.DIS(x)
 
 

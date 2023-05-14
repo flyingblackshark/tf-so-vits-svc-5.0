@@ -113,8 +113,7 @@ def train(rank, args, chkpt_path, hp, hp_str):
     d_optimizer=tf.keras.optimizers.AdamW(learning_rate=0.0003)
     g_optimizer=tf.keras.optimizers.AdamW(learning_rate=0.0003)
     stft_criterion = MultiResolutionSTFTLoss(eval(hp.mrd.resolutions))
-    train_loss_results = []
-    train_accuracy_results = []
+
     stft = TacotronSTFT(filter_length=hp.data.filter_length,
                         hop_length=hp.data.hop_length,
                         win_length=hp.data.win_length,
@@ -161,7 +160,7 @@ def train(rank, args, chkpt_path, hp, hp_str):
             spec_l = spec.shape[2]
             audio_l = audio.shape[2]
             
-            with tf.GradientTape(persistent=True) as tape:
+            with tf.GradientTape(persistent=False) as tape:
                 fake_audio, ids_slice, z_mask, \
                     (z_f, z_r, z_p, m_p, logs_p, z_q, m_q, logs_q, logdet_f, logdet_r) = model_g(
                         ppg, pit, spec, spk, ppg_l, spec_l)
@@ -170,7 +169,8 @@ def train(rank, args, chkpt_path, hp, hp_str):
                 mel_fake = stft.mel_spectrogram(tf.expand_dims(fake_audio,1))
                 mel_real = stft.mel_spectrogram(tf.expand_dims(audio,1))
                 mel_loss = l1_loss(mel_fake, mel_real) * hp.train.c_mel
-                tape.gradient(mel_loss, model_g.trainable_variables)
+            tape.gradient(mel_loss, model_g.trainable_variables)
+            with tf.GradientTape(persistent=False) as tape:
                 sc_loss, mag_loss = stft_criterion(tf.expand_dims(fake_audio,1), tf.expand_dims(audio,1))
                 stft_loss = (sc_loss + mag_loss) * hp.train.c_stft
                 #tape.gradient(stft_loss, model_g.trainable_variables)
@@ -180,19 +180,22 @@ def train(rank, args, chkpt_path, hp, hp_str):
                     score_loss += tf.math.reduce_mean(tf.pow(score_fake - 1.0, 2))
                 score_loss = score_loss / len(res_fake + period_fake + dis_fake)
                 res_real, period_real, dis_real = model_d(audio)
-                tape.gradient(score_loss, model_g.trainable_variables)
+            tape.gradient(score_loss, model_g.trainable_variables)
+            with tf.GradientTape(persistent=False) as tape:
                 feat_loss = 0.0
                 for (feat_fake, _), (feat_real, _) in zip(res_fake + period_fake + dis_fake, res_real + period_real + dis_real):
                     for fake, real in zip(feat_fake, feat_real):
                         feat_loss += tf.math.reduce_mean(tf.abs(fake - real))
                 feat_loss = feat_loss / len(res_fake + period_fake + dis_fake)
                 feat_loss = feat_loss * 2
-                tape.gradient(feat_loss, model_g.trainable_variables)
+            tape.gradient(feat_loss, model_g.trainable_variables)
+            with tf.GradientTape(persistent=False) as tape:
                 loss_kl_f = kl_loss(z_f, logs_q, m_p, logs_p, logdet_f, z_mask) * hp.train.c_kl
                 loss_kl_r = kl_loss(z_r, logs_p, m_q, logs_q, logdet_r, z_mask) * hp.train.c_kl
-                tape.gradient(loss_kl_f, model_g.trainable_variables)
-                # Loss
                 loss_g = score_loss + feat_loss + mel_loss + stft_loss + loss_kl_f
+            tape.gradient(loss_kl_f, model_g.trainable_variables)
+                # Loss
+           
                 
                 
             with tf.GradientTape() as tape:
