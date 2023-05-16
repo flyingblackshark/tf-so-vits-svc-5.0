@@ -5,7 +5,7 @@ from vits.models import SynthesizerTrn
 from vits_decoder.discriminator import Discriminator
 from vits_extend.stft import TacotronSTFT
 from vits_extend.stft_loss import MultiResolutionSTFTLoss
-from .tf_gan_model import ConditionalGAN
+
 
 
 
@@ -112,9 +112,11 @@ def train(rank, args, chkpt_path, hp, hp_str):
             len_min = min(len_pit,len_ppg)  
             pit = pit[:len_min]
             ppg = ppg[:len_min, :]
+            spec = tf.squeeze(spec,0)
             spec = spec[:, :len_min]
+            spec = tf.expand_dims(spec,0)
             ppg_l = ppg.shape[1]
-            spec_l =spec.shape[1]
+            spec_l =spec.shape[2]
             with tf.GradientTape() as tape:
                 fake_audio, ids_slice, z_mask, \
                     (z_f, z_r, z_p, m_p, logs_p, z_q, m_q, logs_q, logdet_f, logdet_r) = model_g(
@@ -150,7 +152,7 @@ def train(rank, args, chkpt_path, hp, hp_str):
                 res_real, period_real, dis_real = model_d(audio)
 
                 loss_d = d_loss_fn(res_fake + period_fake + dis_fake, res_real + period_real + dis_real)
-                tape.gradient(loss_d, model_d.trainable_variables,unconnected_gradients=tf.UnconnectedGradients.ZERO)
+                gradients = tape.gradient(loss_d, model_d.trainable_variables,unconnected_gradients=tf.UnconnectedGradients.ZERO)
                 d_optimizer.apply_gradients(zip(gradients, model_d.trainable_weights))
                 #loss_d.backward()
                 #clip_grad_value_(model_d.parameters(),  None)

@@ -178,7 +178,7 @@ import sys
 #         return cyc_noise, pulse_train, sine_wav, uv, noise
 
 
-class SineGen(tf.keras.layers.Layer):
+class SineGen(tf.keras.Model):
     """Definition of sine generator
     SineGen(samp_rate, harmonic_num = 0,
             sine_amp = 0.1, noise_std = 0.003,

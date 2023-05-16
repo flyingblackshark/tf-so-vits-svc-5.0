@@ -71,7 +71,7 @@ class LogSTFTMagnitudeLoss(tf.keras.losses.Loss):
         return tf.keras.losses.mean_absolute_error(tf.math.log(y_mag), tf.math.log(x_mag))
 
 
-class STFTLoss(tf.keras.Model):
+class STFTLoss(tf.keras.layers.Layer):
     """STFT loss module."""
 
     def __init__(self, fft_size=1024, shift_size=120, win_length=600):#, window="hann_window"):
@@ -102,7 +102,7 @@ class STFTLoss(tf.keras.Model):
         return sc_loss, mag_loss
 
 
-class MultiResolutionSTFTLoss(tf.keras.losses.Loss):
+class MultiResolutionSTFTLoss(tf.keras.Model):
     """Multi resolution STFT loss module."""
 
     def __init__(self,

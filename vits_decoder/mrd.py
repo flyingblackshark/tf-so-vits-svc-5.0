@@ -5,7 +5,7 @@
 import functools
 import tensorflow as tf
 import tensorflow_addons as tfa
-class DiscriminatorR(tf.keras.layers.Layer):
+class DiscriminatorR(tf.keras.Model):
     def __init__(self, hp, resolution):
         super(DiscriminatorR, self).__init__()
 
@@ -61,7 +61,7 @@ def complex_to_float(complex_num):
     real = tf.cast(tf.math.real(complex_num),dtype=tf.float32)
     imag = tf.cast(tf.math.imag(complex_num),dtype=tf.float32)
     return tf.sqrt(real**2+imag**2)
-class MultiResolutionDiscriminator(tf.keras.layers.Layer):
+class MultiResolutionDiscriminator(tf.keras.Model):
     def __init__(self, hp):
         super(MultiResolutionDiscriminator, self).__init__()
         self.resolutions = eval(hp.mrd.resolutions)

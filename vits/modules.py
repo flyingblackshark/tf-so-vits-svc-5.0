@@ -2,12 +2,12 @@
 import tensorflow as tf
 import tensorflow_addons as tfa
 from vits.losses import fused_add_tanh_sigmoid_multiply
-class Flip(tf.keras.Model):
+class Flip(tf.keras.layers.Layer):
     def call(self, x, *args, reverse=False, **kwargs):   
         x = tf.reverse(x, [1])
         logdet = tf.zeros([x.shape[0]])#.to(dtype=x.dtype, device=x.device)
         return x, logdet
-class WN(tf.keras.Model):
+class WN(tf.keras.layers.Layer):
     def __init__(
         self,
         hidden_channels,

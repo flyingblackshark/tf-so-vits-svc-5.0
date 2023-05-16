@@ -139,7 +139,7 @@ class PosteriorEncoder(tf.keras.layers.Layer):
         x_mask = tf.expand_dims(tf.sequence_mask(x_lengths, x.shape[1]), 1)
         x_mask =tf.expand_dims(x_mask,0)
         x_mask = tf.transpose(x_mask,[0,2,1])
-        x = tf.transpose(x,[0,2,1])
+     #   x = tf.transpose(x,[0,2,1])
         temp = self.pre(x,training=training)
         temp = tf.transpose(temp,[0,2,1])
         x_mask=tf.cast(x_mask,dtype=tf.float32)
@@ -201,7 +201,7 @@ class SynthesizerTrn(tf.keras.Model):
         self.dec = Generator(hp=hp)
 
     def call(self, ppg, pit, spec, spk, ppg_l, spec_l, training=False):
-        g = tf.expand_dims(self.emb_g(tf.keras.utils.normalize(spk)),-1)
+        g = tf.expand_dims(self.emb_g(tf.keras.utils.normalize(spk),training=training),-1)
         z_p, m_p, logs_p, ppg_mask = self.enc_p(
             ppg, ppg_l, f0=f0_to_coarse(pit),training=training)
         z_q, m_q, logs_q, spec_mask = self.enc_q(spec, spec_l, g=g,training=training)
@@ -219,7 +219,7 @@ class SynthesizerTrn(tf.keras.Model):
     def infer(self, ppg, pit, spk, ppg_l):
         z_p, m_p, logs_p, ppg_mask = self.enc_p(
             ppg, ppg_l, f0=f0_to_coarse(pit))
-        z, _ = self.flow(z_p, ppg_mask, g=spk, reverse=True,training=False)
+        z, _ = self.flow(z_p, ppg_mask, g=spk, reverse=True)
         o = self.dec(spk, z * ppg_mask, f0=pit)
         return o
 

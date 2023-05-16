@@ -4,7 +4,7 @@
 # from torch.nn.utils import weight_norm, spectral_norm
 import tensorflow as tf
 import tensorflow_addons as tfa
-class DiscriminatorP(tf.keras.layers.Layer):
+class DiscriminatorP(tf.keras.Model):
     def __init__(self, hp, period):
         super(DiscriminatorP, self).__init__()
 
@@ -53,7 +53,7 @@ class DiscriminatorP(tf.keras.layers.Layer):
         return fmap, x
 
 
-class MultiPeriodDiscriminator(tf.keras.layers.Layer):
+class MultiPeriodDiscriminator(tf.keras.Model):
     def __init__(self, hp):
         super(MultiPeriodDiscriminator, self).__init__()
 

@@ -9,7 +9,7 @@ from vits import commons
 #from vits.modules import LayerNorm
 
 
-class Encoder(tf.keras.layers.Layer):
+class Encoder(tf.keras.Model):
     def __init__(
         self,
         hidden_channels,
@@ -80,7 +80,7 @@ class Encoder(tf.keras.layers.Layer):
         return x
 
 
-# class Decoder(tf.keras.layers.Layer):
+# class Decoder(tf.keras.Model):
 #     def __init__(
 #         self,
 #         hidden_channels,

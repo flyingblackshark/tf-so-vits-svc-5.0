@@ -41,12 +41,12 @@ class AMPBlock(tf.keras.Model):
         ]
        # self.convs2.apply(init_weights)
 
-    def call(self, x):
+    def call(self, x,training=False):
         for c1, c2 in zip(self.convs1, self.convs2):
             xt = tf.keras.layers.LeakyReLU(0.1)(x)
-            xt = c1(xt)
+            xt = c1(xt,training=training)
             xt = tf.keras.layers.LeakyReLU(0.1)(x)
-            xt = c2(xt)
+            xt = c2(xt,training=training)
             x = xt + x
         return x
 

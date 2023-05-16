@@ -140,22 +140,22 @@ class Generator(tf.keras.layers.Layer):
         har_source = tf.transpose(har_source,[0,2,1])
         x=tf.transpose(x,[0,2,1])
         
-        x = self.conv_pre(x)
+        x = self.conv_pre(x,training=training)
     
         for i in range(self.num_upsamples):
             x = tf.keras.layers.LeakyReLU(0.1)(x)
             # upsampling
-            x = self.ups[i](x)
+            x = self.ups[i](x,training=training)
             # nsf
-            x_source = self.noise_convs[i](har_source)
+            x_source = self.noise_convs[i](har_source,training=training)
             x = x + x_source
             # AMP blocks
             xs = None
             for j in range(self.num_kernels):
                 if xs is None:
-                    xs = self.resblocks[i * self.num_kernels + j](x)
+                    xs = self.resblocks[i * self.num_kernels + j](x,training=training)
                 else:
-                    xs += self.resblocks[i * self.num_kernels + j](x)
+                    xs += self.resblocks[i * self.num_kernels + j](x,training=training)
             x = xs / self.num_kernels
 
         # post conv
@@ -177,8 +177,8 @@ class Generator(tf.keras.layers.Layer):
     def eval(self, inference=False):
         super(Generator, self).eval()
         # don't remove weight norm while validation in training loop
-        if inference:
-            self.remove_weight_norm()
+        # if inference:
+        #     self.remove_weight_norm()
 
     def pitch2source(self, f0):
         f0 = f0[:, None]
