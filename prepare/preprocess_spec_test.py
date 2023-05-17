@@ -63,7 +63,7 @@ def compute_spec(hps, filename, specname):
     spec = spectrogram_tf(audio_norm, n_fft, sampling_rate, hop_size, win_size)
     spec = tf.squeeze(spec, 0)
     spec = tf.io.serialize_tensor(spec)
-    #tf.io.write_file(specname,spec)
+    tf.io.write_file(specname,spec)
 
 
 if __name__ == "__main__":

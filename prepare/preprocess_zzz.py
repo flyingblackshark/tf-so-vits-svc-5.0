@@ -82,7 +82,7 @@ with tf.io.TFRecordWriter("./test.tfrecords") as file_writer:
         pit = pit[:len_min]
         ppg = ppg[:len_min, :]
 
-        spe = spe[:, :len_min]
+        spe = spe[:len_min, :]
         wav = wav[:, :len_wav]
         if len_min > use:
             max_frame_start = ppg.shape[0] - use - 1
@@ -91,7 +91,7 @@ with tf.io.TFRecordWriter("./test.tfrecords") as file_writer:
 
             pit = pit[frame_start:frame_end]
             ppg = ppg[frame_start:frame_end, :]
-            spe = spe[:, frame_start:frame_end]
+            spe = spe[frame_start:frame_end, :]
 
             wav_start = frame_start * hps.hop_length
             wav_end = frame_end * hps.hop_length
