@@ -163,5 +163,5 @@ def train(rank, args, chkpt_path, hp, hp_str):
             loss_r = loss_kl_r
             
             print("g %.04f m %.04f s %.04f d %.04f k %.04f r %.04f | step %d" % (
-                loss_g, loss_m, loss_s, loss_d, loss_k, loss_r,epoch))
+                loss_g, loss_m, loss_s, loss_d, loss_k, loss_r,step))
             
