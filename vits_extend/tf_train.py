@@ -105,19 +105,22 @@ def train(rank, args, chkpt_path, hp, hp_str):
 
         # Iterate over the batches of the dataset.
         for step, (spec,wav,ppg,pit,spk) in enumerate(dataset):
-            audio = tf.transpose(wav,[0,1,3,2])
-            audio = tf.squeeze(audio,0)
+            #audio = tf.transpose(wav,[0,1,3,2])
+            audio = tf.squeeze(wav,0)
             len_pit = pit.shape[1]
             len_ppg = ppg.shape[1]
             len_min = min(len_pit,len_ppg)  
             pit = pit[:len_min]
             ppg = ppg[:len_min, :]
+           
+            spec = tf.transpose(spec,[0,2,1])
             spec = tf.squeeze(spec,0)
-            spec = spec[:, :len_min]
-            spec = tf.expand_dims(spec,0)
+            spec = spec[:, :len_min]        
+            spec=tf.expand_dims(spec,0)
+            spec = tf.transpose(spec,[0,2,1])
             ppg_l = ppg.shape[1]
-            spec_l =spec.shape[2]
-            with tf.GradientTape() as tape:
+            spec_l =spec.shape[1]
+            with tf.GradientTape(persistent= True) as tape:
                 fake_audio, ids_slice, z_mask, \
                     (z_f, z_r, z_p, m_p, logs_p, z_q, m_q, logs_q, logdet_f, logdet_r) = model_g(
                         ppg, pit, spec, spk, ppg_l, spec_l,training=True)
@@ -132,28 +135,24 @@ def train(rank, args, chkpt_path, hp, hp_str):
                 sc_mag_loss = stft_criterion(temp1,temp2 )
                 #stft_loss = (sc_loss + mag_loss) * hp.train.c_stft
                 stft_loss = sc_mag_loss * hp.train.c_stft
-                res_fake, period_fake, dis_fake = model_d(fake_audio)
+                res_fake, period_fake, dis_fake = model_d(fake_audio,training=True)
                 score_loss = score_loss_fn(res_fake + period_fake + dis_fake,1.0)
-                res_real, period_real, dis_real = model_d(audio)
+                res_real, period_real, dis_real = model_d(audio,training=True)
                 feat_loss = feat_loss_fn(res_fake + period_fake + dis_fake, res_real + period_real + dis_real)
                 loss_kl_f = kl_loss(z_f, logs_q, m_p, logs_p, logdet_f, z_mask) * hp.train.c_kl
                 loss_kl_r = kl_loss(z_r, logs_p, m_q, logs_q, logdet_r, z_mask) * hp.train.c_kl
                 loss_g = score_loss + feat_loss + mel_loss + stft_loss + loss_kl_f
-            gradients = tape.gradient(loss_g, model_g.trainable_variables,unconnected_gradients=tf.UnconnectedGradients.ZERO)
-            g_optimizer.apply_gradients(zip(gradients, model_g.trainable_weights))
+          
                 # Loss
-        
-                
-                
-            with tf.GradientTape() as tape:
                 #optim_d.zero_grad()
                 #fake_audio = tf.stop_gradient(fake_audio)
-                res_fake, period_fake, dis_fake = model_d(fake_audio)
-                res_real, period_real, dis_real = model_d(audio)
-
+                res_fake, period_fake, dis_fake = model_d(fake_audio,training=True)
+                res_real, period_real, dis_real = model_d(audio,training=True)
                 loss_d = d_loss_fn(res_fake + period_fake + dis_fake, res_real + period_real + dis_real)
-                gradients = tape.gradient(loss_d, model_d.trainable_variables,unconnected_gradients=tf.UnconnectedGradients.ZERO)
-                d_optimizer.apply_gradients(zip(gradients, model_d.trainable_weights))
+            gradients = tape.gradient(loss_d, model_d.trainable_variables,unconnected_gradients=tf.UnconnectedGradients.ZERO)
+            d_optimizer.apply_gradients(zip(gradients, model_d.trainable_weights))
+            gradients = tape.gradient(loss_g, model_g.trainable_variables,unconnected_gradients=tf.UnconnectedGradients.ZERO)
+            g_optimizer.apply_gradients(zip(gradients, model_g.trainable_weights))
                 #loss_d.backward()
                 #clip_grad_value_(model_d.parameters(),  None)
             loss_g = loss_g

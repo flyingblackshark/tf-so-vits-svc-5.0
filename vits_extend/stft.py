@@ -116,7 +116,7 @@ class TacotronSTFT(tf.Module):
        (0,0),
         (int((self.n_fft - self.hop_size) / 2), int((self.n_fft - self.hop_size) / 2))
         ])
-        y = tf.squeeze(y,1)
+        y = tf.squeeze(y,-1)
         y = tf.pad(tensor=y,paddings=paddings,
             mode='CONSTANT')
         y = tf.squeeze(y,1)

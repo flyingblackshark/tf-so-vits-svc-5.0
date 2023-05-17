@@ -66,34 +66,35 @@ class WN(tf.keras.layers.Layer):
         n_channels_tensor = tf.cast([self.hidden_channels],dtype=tf.int32)
 
         if g is not None:
-            g = tf.transpose(g,[0,2,1])
+            #g = tf.transpose(g,[0,2,1])
             g = self.cond_layer(g,training=training)
-            g = tf.transpose(g,[0,2,1])
+            #g = tf.transpose(g,[0,2,1])
 
         for i in range(self.n_layers):
-            temp = tf.transpose(x,[0,2,1])
-            x_in = self.in_layers[i](temp,training=training)
-            temp = tf.transpose(x_in,[0,2,1])
+       #     temp = tf.transpose(x,[0,2,1])
+            x_in = self.in_layers[i](x,training=training)
+      #      temp = tf.transpose(x_in,[0,2,1])
             if g is not None:
                 cond_offset = i * 2 * self.hidden_channels
-                g_l = g[:, cond_offset : cond_offset + 2 * self.hidden_channels, :]
+                g_l = g[:,:, cond_offset : cond_offset + 2 * self.hidden_channels]
+                #g_l = tf.transpose(g_l,[0,2,1])
             else:
-                g_l = tf.zeros_like(temp)
+                g_l = tf.zeros_like(x_in)
 
-            acts = fused_add_tanh_sigmoid_multiply(temp, g_l, n_channels_tensor)
+            acts = fused_add_tanh_sigmoid_multiply(x_in, g_l, n_channels_tensor)
             acts = self.drop(acts)
-            acts = tf.transpose(acts,[0,2,1])
+            #acts = tf.transpose(acts,[0,2,1])
             res_skip_acts = self.res_skip_layers[i](acts,training=training)
-            res_skip_acts = tf.transpose(res_skip_acts,[0,2,1])
+            #res_skip_acts = tf.transpose(res_skip_acts,[0,2,1])
             
             if i < self.n_layers - 1:
                
-                res_acts = res_skip_acts[:, : self.hidden_channels, :]
+                res_acts = res_skip_acts[:,:,:self.hidden_channels]
                 temp = x + res_acts
                 #temp = tf.transpose(temp,[0,2,1])
                 x =  temp * x_mask
                 #x = tf.transpose(x,[0,2,1])
-                output = output + res_skip_acts[:, self.hidden_channels:, :]
+                output = output + res_skip_acts[:,:,:self.hidden_channels]
             else:
                 #res_skip_acts=tf.transpose(res_skip_acts,[0,2,1])
                 output = output + res_skip_acts
@@ -138,28 +139,27 @@ class ResidualCouplingLayer(tf.keras.layers.Layer):
         self.post.kernel_initializer=tf.keras.initializers.Zeros()
         self.post.bias_initializer=tf.keras.initializers.Zeros()
         # SNAC Speaker-normalized Affine Coupling Layer
-        self.snac = tf.keras.layers.Conv1D(2 * self.half_channels, 1)
+        self.snac = tf.keras.layers.Conv1D(filters=2 * self.half_channels, kernel_size=1)
 
     def call(self, x, x_mask, g=None, reverse=False,training=False):
-        temp = tf.expand_dims(g,-1)
-        temp = tf.transpose(temp,[0,2,1])
-        speaker = self.snac(temp,training=training)
-        speaker = tf.transpose(speaker,[0,2,1])
-        speaker_m, speaker_v = tf.split(speaker,2, axis=1)  # (B, half_channels, 1)
-        x0, x1 = tf.split(x, [self.half_channels] * 2, 1)
+        # temp = tf.expand_dims(g,-1)
+        # temp = tf.transpose(temp,[0,2,1])
+        speaker = self.snac(tf.expand_dims(g,axis=1),training=training)
+        #speaker= tf.expand_dims(speaker,-1)
+        #speaker = tf.transpose(speaker,[0,2,1])
+        speaker_m, speaker_v = tf.split(speaker,2, axis=2)  # (B, half_channels, 1)
+        x0, x1 = tf.split(x, [self.half_channels] * 2, axis=2)
         # x0 norm
         x0_norm = (x0 - speaker_m) * tf.exp(-speaker_v) * x_mask
-        x0_norm = tf.transpose(x0_norm,[0,2,1])
-        temp = self.pre(x0_norm,training=training)
-        temp = tf.transpose(temp,[0,2,1])
-        h =  temp * x_mask
+        #x0_norm = tf.transpose(x0_norm,[0,2,1])
+        #temp = tf.transpose(temp,[0,2,1])
+        h =  self.pre(x0_norm,training=training) * x_mask
         #h = tf.transpose(h,[0,2,1])
         # don't use global condition
         h = self.enc(h, x_mask,training=training)
-        h = tf.transpose(h,[0,2,1])
-        temp = self.post(h,training=training)
-        temp = tf.transpose(temp,[0,2,1])
-        stats =  temp * x_mask
+        #h = tf.transpose(h,[0,2,1])
+        #temp = tf.transpose(temp,[0,2,1])
+        stats =  self.post(h,training=training) * x_mask
         if not self.mean_only:
             m, logs = tf.split(stats, [self.half_channels] * 2, 1)
         else:
@@ -170,7 +170,7 @@ class ResidualCouplingLayer(tf.keras.layers.Layer):
             # x1 norm before affine xform
             x1_norm = (x1 - speaker_m) * tf.exp(-speaker_v) * x_mask
             x1 = (m + x1_norm * tf.exp(logs)) * x_mask
-            x = tf.concat([x0, x1], 1)
+            x = tf.concat([x0, x1], 2)
             # speaker var to logdet
             logdet = tf.math.reduce_sum(logs * x_mask, [1, 2]) - tf.math.reduce_sum(
                tf.broadcast_to(speaker_v,[speaker_v.shape[0],speaker_v.shape[1],logs.shape[-1]]) #speaker_v.expand(-1, -1, logs.shape[-1]) 
@@ -180,7 +180,7 @@ class ResidualCouplingLayer(tf.keras.layers.Layer):
             x1 = (x1 - m) * tf.exp(-logs) * x_mask
             # x1 denorm before output
             x1 = (speaker_m + x1 * tf.exp(speaker_v)) * x_mask
-            x = tf.concat([x0, x1], 1)
+            x = tf.concat([x0, x1], 2)
             # speaker var to logdet
             logdet = tf.math.reduce_sum(logs * x_mask, [1, 2]) + tf.math.reduce_sum(
               tf.broadcast_to(speaker_v,[speaker_v.shape[0],speaker_v.shape[1],logs.shape[-1]])  #speaker_v.expand(-1, -1, logs.shape[-1]) 

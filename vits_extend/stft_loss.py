@@ -21,9 +21,10 @@ def stft(x, fft_size, hop_size, win_length):
     Returns:
         Tensor: Magnitude spectrogram (B, #frames, fft_size // 2 + 1).
     """
+    x =tf.squeeze(x,-1)
     x_stft = tf.signal.stft(signals=x, frame_length=win_length, frame_step=hop_size,fft_length=fft_size,window_fn=functools.partial(tf.signal.hann_window, periodic=True))
-    real = x_stft[..., 0]
-    imag = x_stft[..., 1]
+    real = tf.math.real(x_stft)#x_stft[..., 0]
+    imag = tf.math.imag(x_stft)#x_stft[..., 1]
     real=tf.cast(real,tf.float32)
     imag=tf.cast(imag,tf.float32)
     real=tf.squeeze(real,0)

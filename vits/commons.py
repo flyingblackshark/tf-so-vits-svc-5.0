@@ -20,12 +20,12 @@ def clip_grad_value_(parameters, clip_value, norm_type=2):
 #     input_tensor[tuple(position)] = value
 #     return input_tensor
 def slice_segments(x, ids_str, segment_size=4):
-    ret = tf.zeros_like(x[:, :, :segment_size]).numpy()
+    ret = tf.zeros_like(x[:, :segment_size, :]).numpy()
     for i in range(x.shape[0]):
         idx_str = ids_str[i]
         idx_end = idx_str + segment_size
         #ret = tf.py_function(mo, inp=[ret, [i], x[i, :, idx_str:idx_end]], Tout=ret.dtype)
-        ret[i] = x[i, :, idx_str:idx_end]
+        ret[i] = x[i, idx_str:idx_end, :]
     return ret
 def slice_pitch_segments(x, ids_str, segment_size=4):
     ret = tf.zeros_like(x[:, :segment_size]).numpy()

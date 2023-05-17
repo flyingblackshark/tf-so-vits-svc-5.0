@@ -80,7 +80,8 @@ def kl_loss_back(z_p, logs_q, m_p, logs_p, z_mask):
 def fused_add_tanh_sigmoid_multiply(input_a, input_b, n_channels):
     n_channels_int = n_channels[0]
     in_act = input_a + input_b
-    t_act = tf.tanh(in_act[:, :n_channels_int, :])
-    s_act = tf.sigmoid(in_act[:, n_channels_int:, :])
+    #in_act = tf.transpose(in_act, perm=[0, 2, 1])
+    t_act = tf.tanh(in_act[:,:, :n_channels_int])
+    s_act = tf.sigmoid(in_act[:,:, n_channels_int:])
     acts = t_act * s_act
     return acts

@@ -37,27 +37,27 @@ class TextEncoder(tf.keras.layers.Layer):
         self.proj = tf.keras.layers.Conv1D(out_channels * 2, 1)
 
     def call(self, x, x_lengths, f0, training=False):
-        x = tf.transpose(x, perm=[0,2,1])  # [b, h, t]
-        x_mask = tf.sequence_mask(x_lengths, x.shape[2])
+      #  x = tf.transpose(x, perm=[0,2,1])  # [b, h, t]
+        x_mask = tf.sequence_mask(x_lengths, x.shape[1])
         x_mask = tf.expand_dims(x_mask, 1)
-        x = tf.transpose(x,[0,2,1])
+      #  x = tf.transpose(x,[0,2,1])
         pre = self.pre(x,training=training)
         x_mask = tf.expand_dims(x_mask,0)
-        x_mask = tf.transpose(x_mask,[0,2,1])
+    #    x_mask = tf.transpose(x_mask,[0,2,1])
         x_mask = tf.cast(x_mask,tf.float32)
-        pre = tf.transpose(pre,[0,2,1])
+       # pre = tf.transpose(pre,[0,2,1])
         x = pre * x_mask
        
         #x = tf.transpose(x,[0,2,1])
-        x = x + tf.transpose(self.pit(f0,training=training),[0,2,1])
+        #temp = self.pit(f0,training=training)
+        x = x + self.pit(f0,training=training)#tf.transpose(temp,[0,2,1])
         #x=tf.transpose(x,[0,2,1])
         x = self.enc(x * x_mask, x_mask,training=training)
         #x = x + tf.transpose(self.pit(f0),[0,2,1])
-        x=tf.transpose(x,[0,2,1])
-        temp = self.proj(x,training=training)
-        temp=tf.transpose(temp,[0,2,1])
-        stats = temp * x_mask
-        m, logs = tf.split(stats,2,axis=1) #self.out_channels, axis=1)
+      #  x=tf.transpose(x,[0,2,1])
+      #  temp=tf.transpose(temp,[0,2,1])
+        stats = self.proj(x,training=training) * x_mask
+        m, logs = tf.split(stats,2,axis=2) #self.out_channels, axis=1)
         temp1 = tf.random.normal(m.shape,dtype=tf.float32)
         temp2 = tf.exp(logs)
         z = (m + temp1 * temp2) * x_mask
@@ -138,21 +138,21 @@ class PosteriorEncoder(tf.keras.layers.Layer):
     def call(self, x, x_lengths, g=None,training=False):
         x_mask = tf.expand_dims(tf.sequence_mask(x_lengths, x.shape[1]), 1)
         x_mask =tf.expand_dims(x_mask,0)
-        x_mask = tf.transpose(x_mask,[0,2,1])
+        #x_mask = tf.transpose(x_mask,[0,2,1])
      #   x = tf.transpose(x,[0,2,1])
-        temp = self.pre(x,training=training)
-        temp = tf.transpose(temp,[0,2,1])
+        x = self.pre(x,training=training)
+        #temp = tf.transpose(temp,[0,2,1])
         x_mask=tf.cast(x_mask,dtype=tf.float32)
-        x = temp * x_mask
+        x = x * x_mask
 
         #x = tf.transpose(x,[0,2,1])
         x = self.enc(x, x_mask, g=g,training=training)
-        x = tf.transpose(x,[0,2,1])
-        temp = self.proj(x,training=training)
-        temp = tf.transpose(temp,[0,2,1])
-        stats = temp * x_mask
+       # x = tf.transpose(x,[0,2,1])
+        x = self.proj(x,training=training)
+       # temp = tf.transpose(temp,[0,2,1])
+        stats = x * x_mask
         #stats = tf.transpose(stats,[0,2,1])
-        m, logs = tf.split(stats,2,axis=1)# self.out_channels, dim=1)
+        m, logs = tf.split(stats,2,axis=2)# self.out_channels, dim=1)
 
         z = (m + tf.random.normal(m.shape) * tf.exp(logs)) * x_mask
         return z, m, logs, x_mask
@@ -201,7 +201,7 @@ class SynthesizerTrn(tf.keras.Model):
         self.dec = Generator(hp=hp)
 
     def call(self, ppg, pit, spec, spk, ppg_l, spec_l, training=False):
-        g = tf.expand_dims(self.emb_g(tf.keras.utils.normalize(spk),training=training),-1)
+        g = tf.expand_dims(self.emb_g(tf.keras.utils.normalize(spk),training=training),0)
         z_p, m_p, logs_p, ppg_mask = self.enc_p(
             ppg, ppg_l, f0=f0_to_coarse(pit),training=training)
         z_q, m_q, logs_q, spec_mask = self.enc_q(spec, spec_l, g=g,training=training)

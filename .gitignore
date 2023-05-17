@@ -163,3 +163,8 @@ cython_debug/
 .vscode/
 .vscode
 .vscode/launch.json
+
+# Visual Studio Code
+#ignore all folders and files in  data_svc and dataset_raw
+data_svc/*
+dataset_raw/*

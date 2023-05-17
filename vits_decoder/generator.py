@@ -46,10 +46,10 @@ class SpeakerAdapter(tf.keras.layers.Layer):
         y = (x - mean) / std
         scale = self.W_scale(speaker_embedding,training=training)
         bias = self.W_bias(speaker_embedding,training=training)
-        y =  tf.transpose(y,[0,2,1])
+       # y =  tf.transpose(y,[0,2,1])
         y *= tf.expand_dims(scale,1)
         y += tf.expand_dims(bias,1)
-        y = tf.transpose(y,[0,2,1])
+       # y = tf.transpose(y,[0,2,1])
         return y
 
 
@@ -138,7 +138,7 @@ class Generator(tf.keras.layers.Layer):
         #f0 = tf.transpose(temp,[0,2,1])
         har_source = self.m_source(f0,training=training)
         har_source = tf.transpose(har_source,[0,2,1])
-        x=tf.transpose(x,[0,2,1])
+        #x=tf.transpose(x,[0,2,1])
         
         x = self.conv_pre(x,training=training)
     
@@ -164,7 +164,7 @@ class Generator(tf.keras.layers.Layer):
         x = self.conv_post(x)
 
         x = tf.tanh(x)
-        x=tf.transpose(x,[0,2,1])
+        #x=tf.transpose(x,[0,2,1])
 
         return x
 

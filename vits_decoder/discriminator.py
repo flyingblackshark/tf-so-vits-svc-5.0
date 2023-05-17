@@ -29,13 +29,13 @@ class DiscriminatorS(tf.keras.Model):
         self.conv_post = tfa.layers.WeightNormalization(tf.keras.layers.Conv1D(#1024,
              1, 3, 1, padding='same'))
 
-    def call(self, x):
+    def call(self, x,training=False):
         fmap = []
         for l in self.convs:
-            x = l(x)
+            x = l(x,training=training)
             #x = tf.keras.layers.LeakyReLU(x, 0.1)
             fmap.append(x)
-        x = self.conv_post(x)
+        x = self.conv_post(x,training=training)
         fmap.append(x)
         #x = torch.flatten(x, 1, -1)
         x = tf.reshape(x,[x.shape[0],-1])

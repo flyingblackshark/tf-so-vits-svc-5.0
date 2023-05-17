@@ -63,9 +63,11 @@ class Encoder(tf.keras.Model):
             self.norm_layers_2.append(tf.keras.layers.LayerNormalization())
 
     def call(self, x, x_mask,training=False):
-        attn_mask = tf.expand_dims(x_mask,2) * tf.expand_dims(x_mask,-1)
+        attn_mask = tf.expand_dims(x_mask,-1) * tf.expand_dims(x_mask,0)
+        attn_mask = tf.expand_dims(attn_mask,1)
+        attn_mask = tf.squeeze(attn_mask,-1)
         x = x * x_mask
-        x=tf.transpose(x,[0,2,1])
+        #x=tf.transpose(x,[0,2,1])
         for i in range(self.n_layers):
             y = self.attn_layers[i](query=x, value=x,key=x,attention_mask=attn_mask,training=training)
             y = self.drop(y)
@@ -75,7 +77,7 @@ class Encoder(tf.keras.Model):
           
             y = self.drop(y)
             x = self.norm_layers_2[i](x + y,training=training)      
-        x=tf.transpose(x,[0,2,1])   
+        #x=tf.transpose(x,[0,2,1])   
         x = x * x_mask
         return x
 
@@ -410,24 +412,24 @@ class FFN(tf.keras.Model):
         self.drop = tf.keras.layers.Dropout(p_dropout)
 
     def call(self, x, x_mask,training=False):
-        x=tf.transpose(x,[0,2,1])
-        temp = x * x_mask
-        temp=tf.transpose(temp,[0,2,1])
-        x = self.conv_1(temp,training=training)
+       # x=tf.transpose(x,[0,2,1])
+        x = x * x_mask
+        #temp=tf.transpose(temp,[0,2,1])
+        x = self.conv_1(x,training=training)
        
         if self.activation == "gelu":
             x = x * tf.sigmoid(1.702 * x)
         else:
             x = tf.keras.layers.ReLU()(x)
         x = self.drop(x)
-        x=tf.transpose(x,[0,2,1])
-        temp = x * x_mask
-        temp=tf.transpose(temp,[0,2,1])
-        x = self.conv_2(temp,training=training)
-        x=tf.transpose(x,[0,2,1])
-        temp = x * x_mask
-        temp=tf.transpose(temp,[0,2,1])
-        return temp
+        #x=tf.transpose(x,[0,2,1])
+        x = x * x_mask
+        #temp=tf.transpose(temp,[0,2,1])
+        x = self.conv_2(x,training=training)
+        #x=tf.transpose(x,[0,2,1])
+        x = x * x_mask
+       # x=tf.transpose(x,[0,2,1])
+        return x
 
     # def _causal_padding(self, x):
     #     if self.kernel_size == 1:

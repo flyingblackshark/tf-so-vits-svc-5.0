@@ -4,7 +4,7 @@
 # from torch.nn.utils import weight_norm, spectral_norm
 import tensorflow as tf
 import tensorflow_addons as tfa
-class DiscriminatorP(tf.keras.Model):
+class DiscriminatorP(tf.keras.layers.Layer):
     def __init__(self, hp, period):
         super(DiscriminatorP, self).__init__()
 
@@ -30,39 +30,40 @@ class DiscriminatorP(tf.keras.Model):
         self.conv_post = tfa.layers.WeightNormalization(tf.keras.layers.Conv2D(#1024, 
             1,(3, 1), 1, padding='same'))
 
-    def call(self, x):
+    def call(self, x,training=False):
         fmap = []
 
         # 1d to 2d
-        b, c, t = x.shape
+        b, t, c = x.shape
+        #b, c, t = x.shape
         if t % self.period != 0: # pad first
             n_pad = self.period - (t % self.period)
-            x = tf.pad(x, [(0,0),(0,0),(0, n_pad)], "reflect")
+            x = tf.pad(x, [(0,0),(0, n_pad),(0,0)], "reflect")
             t = t + n_pad
         #x = x.view(b, c, t // self.period, self.period)
         x = tf.reshape(x, [b, c, t // self.period, self.period])
 
         for l in self.convs:
-            x = l(x)
+            x = l(x,training=training)
             #x = tf.keras.layers.LeakyReLU(x, self.LRELU_SLOPE)
             fmap.append(x)
-        x = self.conv_post(x)
+        x = self.conv_post(x,training=training)
         fmap.append(x)
         #x = torch.flatten(x, 1, -1)
         x = tf.reshape(x,[x.shape[0],-1])
         return fmap, x
 
 
-class MultiPeriodDiscriminator(tf.keras.Model):
+class MultiPeriodDiscriminator(tf.keras.layers.Layer):
     def __init__(self, hp):
         super(MultiPeriodDiscriminator, self).__init__()
 
         self.discriminators = [DiscriminatorP(hp, period) for period in hp.mpd.periods]
         
 
-    def __call__(self, x):
+    def call(self, x,training=False):
         ret = list()
         for disc in self.discriminators:
-            ret.append(disc(x))
+            ret.append(disc(x,training=training))
 
         return ret  # [(feat, score), (feat, score), (feat, score), (feat, score), (feat, score)]
