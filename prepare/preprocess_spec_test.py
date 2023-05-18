@@ -1,7 +1,7 @@
 import os
 import tensorflow as tf
 import argparse
-import tensorflow_io as tfio
+#import tensorflow_io as tfio
 from vits import spectrogram
 from vits import utils
 from omegaconf import OmegaConf

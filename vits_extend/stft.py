@@ -30,8 +30,8 @@ import tensorflow as tf
 import numpy as np
 from librosa.util import normalize
 from scipy.io.wavfile import read
-import librosa
-import tensorflow_io as tfio
+#import librosa
+#import tensorflow_io as tfio
 from librosa.filters import mel as librosa_mel_fn
 
 # def mel_filterbank(sr, n_mels, n_fft, fmin, fmax):
