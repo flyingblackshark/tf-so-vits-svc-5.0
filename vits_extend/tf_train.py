@@ -54,10 +54,10 @@ def read_tfrecord(example):
     spk = tf.io.parse_tensor(example["spk"],out_type=tf.float32)
     return spe,wav,ppg,pit,spk
 def load_dataset():
-    ignore_order = tf.data.Options(experimental_io_device='/job:localhost')
+    ignore_order = tf.data.Options()
     ignore_order.experimental_deterministic = False  # disable order, increase speed
     dataset = tf.data.TFRecordDataset(
-        "./test.tfrecords"
+        "/content/test.tfrecords"
     )  # automatically interleaves reads from multiple files
     dataset = dataset.with_options(
         ignore_order
