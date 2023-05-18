@@ -88,8 +88,8 @@ def train(rank, args, chkpt_path, hp, hp_str):
     hp)
         
     model_d=Discriminator(hp)
-    d_optimizer=tf.keras.optimizers.AdamW(learning_rate=hp.train.learning_rate, beta_1=hp.train.betas[0],beta_2=hp.train.betas[1], epsilon=hp.train.eps)
-    g_optimizer=tf.keras.optimizers.AdamW(learning_rate=hp.train.learning_rate, beta_1=hp.train.betas[0],beta_2=hp.train.betas[1], epsilon=hp.train.eps)
+    d_optimizer=tf.keras.optimizers.Adam(learning_rate=hp.train.learning_rate, beta_1=hp.train.betas[0],beta_2=hp.train.betas[1], epsilon=hp.train.eps)
+    g_optimizer=tf.keras.optimizers.Adam(learning_rate=hp.train.learning_rate, beta_1=hp.train.betas[0],beta_2=hp.train.betas[1], epsilon=hp.train.eps)
     #stft_criterion = MultiResolutionSTFTLoss(eval(hp.mrd.resolutions))
     
     stft = TacotronSTFT(filter_length=hp.data.filter_length,
