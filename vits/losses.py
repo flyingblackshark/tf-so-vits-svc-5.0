@@ -74,8 +74,8 @@ def kl_loss_back(z_p, logs_q, m_p, logs_p, z_mask):
 
     kl = logs_p - logs_q - 0.5
     kl += 0.5 * ((z_p - m_p) ** 2) * tf.exp(-2.0 * logs_p)
-    kl = tf.keras.backend.sum(kl * z_mask)
-    l = kl / tf.keras.backend.sum(z_mask)
+    kl = tf.reduce_sum(kl * z_mask)
+    l = kl / tf.reduce_sum(z_mask)
     return l
 def fused_add_tanh_sigmoid_multiply(input_a, input_b, n_channels):
     n_channels_int = n_channels[0]

@@ -8,7 +8,7 @@ from omegaconf import OmegaConf
 def complex_to_float(complex_num):
     real = tf.cast(tf.math.real(complex_num),dtype=tf.float32)
     imag = tf.cast(tf.math.imag(complex_num),dtype=tf.float32)
-    return tf.sqrt(real**2+imag**2)
+    return tf.sqrt(real**2+imag**2+1e-6)
 def spectrogram_tf(y, n_fft, sampling_rate, hop_size, win_size):
     if tf.reduce_min(y) < -1.0:
         print("min value is ", tf.reduce_min(y))

@@ -3,37 +3,44 @@
 # import torch.nn.functional as F
 
 from omegaconf import OmegaConf
-# from torch.nn.utils import tfa.layers.WeightNormalization
 from .mpd import MultiPeriodDiscriminator
 from .mrd import MultiResolutionDiscriminator
 import tensorflow as tf
-import tensorflow_addons as tfa
+import tensorflow_probability as tfp
 
 class DiscriminatorS(tf.keras.Model):
     def __init__(self):
         super(DiscriminatorS, self).__init__()
         self.convs = [
-            tfa.layers.WeightNormalization(tf.keras.layers.Conv1D(#1, 
-            16, 15, 1, padding='same')),
-            tfa.layers.WeightNormalization(tf.keras.layers.Conv1D(#16,
-             64, 41, 4, groups=4, padding='same')),
-            tfa.layers.WeightNormalization(tf.keras.layers.Conv1D(#64,
-             256, 41, 4, groups=16, padding='same')),
-            tfa.layers.WeightNormalization(tf.keras.layers.Conv1D(#256,
-             1024, 41, 4, groups=64, padding='same')),
-            tfa.layers.WeightNormalization(tf.keras.layers.Conv1D(#1024, 
-            1024, 41, 4, groups=256, padding='same')),
-            tfa.layers.WeightNormalization(tf.keras.layers.Conv1D(#1024,
-             1024, 5, 1, padding='same')),
+            #tfp.layers.weight_norm.WeightNorm(
+            tf.keras.layers.Conv1D(#1, 
+            16, 15, 1, padding='causal'),
+           #tfp.layers.weight_norm.WeightNorm(
+            tf.keras.layers.Conv1D(#16,
+             64, 41, 4, groups=4, padding='causal'),
+          # tfp.layers.weight_norm.WeightNorm(
+            tf.keras.layers.Conv1D(#64,
+             256, 41, 4, groups=16, padding='causal'),
+         # tfp.layers.weight_norm.WeightNorm(
+            tf.keras.layers.Conv1D(#256,
+             1024, 41, 4, groups=64, padding='causal'),
+           #tfp.layers.weight_norm.WeightNorm(
+            tf.keras.layers.Conv1D(#1024, 
+            1024, 41, 4, groups=256, padding='causal'),
+          # tfp.layers.weight_norm.WeightNorm(
+            tf.keras.layers.Conv1D(#1024,
+             1024, 5, 1, padding='causal'),
         ]
-        self.conv_post = tfa.layers.WeightNormalization(tf.keras.layers.Conv1D(#1024,
-             1, 3, 1, padding='same'))
+        self.conv_post = tf.keras.layers.Conv1D(#1024,
+             1, 3, 1, padding='causal')
+        #tfa.layers.WeightNormalization(
+        
 
     def call(self, x,training=False):
         fmap = []
         for l in self.convs:
             x = l(x,training=training)
-            #x = tf.keras.layers.LeakyReLU(x, 0.1)
+            x = tf.keras.layers.LeakyReLU(0.1)(x)
             fmap.append(x)
         x = self.conv_post(x,training=training)
         fmap.append(x)

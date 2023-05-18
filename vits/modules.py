@@ -1,10 +1,11 @@
 
 import tensorflow as tf
-import tensorflow_addons as tfa
+import tensorflow_probability as tfp
 from vits.losses import fused_add_tanh_sigmoid_multiply
+
 class Flip(tf.keras.layers.Layer):
     def call(self, x, *args, reverse=False, **kwargs):   
-        x = tf.reverse(x, [1])
+        x = tf.reverse(x, [2])
         logdet = tf.zeros([x.shape[0]])#.to(dtype=x.dtype, device=x.device)
         return x, logdet
 class WN(tf.keras.layers.Layer):
@@ -32,10 +33,9 @@ class WN(tf.keras.layers.Layer):
 
         if gin_channels != 0:
             self.cond_layer = tf.keras.layers.Conv1D(
-               # gin_channels,
-                2 * hidden_channels * n_layers, kernel_size=1
+                filters=2 * hidden_channels * n_layers, kernel_size=1
             )
-            #self.cond_layer = tfa.layers.WeightNormalization(cond_layer)
+           # self.cond_layer = tfp.layers.weight_norm.WeightNorm(cond_layer)
             
         for i in range(n_layers):
             dilation = dilation_rate**i
@@ -45,10 +45,10 @@ class WN(tf.keras.layers.Layer):
                 filters=2 * hidden_channels,
                 kernel_size=kernel_size,
                 dilation_rate=dilation,
-                padding='same'
+                padding='causal'
                 #padding=padding,
             )
-            in_layer = tfa.layers.WeightNormalization(in_layer)
+            #in_layer = tfp.layers.weight_norm.WeightNorm(in_layer)
             self.in_layers.append(in_layer)
 
             # last one is not necessary
@@ -58,7 +58,7 @@ class WN(tf.keras.layers.Layer):
                 res_skip_channels = hidden_channels
 
             res_skip_layer = tf.keras.layers.Conv1D(res_skip_channels, 1)
-            res_skip_layer = tfa.layers.WeightNormalization(res_skip_layer)
+           # res_skip_layer = tfp.layers.weight_norm.WeightNorm(res_skip_layer)
             self.res_skip_layers.append(res_skip_layer)
 
     def call(self, x, x_mask, g=None, training=False):
@@ -66,9 +66,7 @@ class WN(tf.keras.layers.Layer):
         n_channels_tensor = tf.cast([self.hidden_channels],dtype=tf.int32)
 
         if g is not None:
-            #g = tf.transpose(g,[0,2,1])
             g = self.cond_layer(g,training=training)
-            #g = tf.transpose(g,[0,2,1])
 
         for i in range(self.n_layers):
        #     temp = tf.transpose(x,[0,2,1])
@@ -82,7 +80,7 @@ class WN(tf.keras.layers.Layer):
                 g_l = tf.zeros_like(x_in)
 
             acts = fused_add_tanh_sigmoid_multiply(x_in, g_l, n_channels_tensor)
-            acts = self.drop(acts)
+            acts = self.drop(acts,training=training)
             #acts = tf.transpose(acts,[0,2,1])
             res_skip_acts = self.res_skip_layers[i](acts,training=training)
             #res_skip_acts = tf.transpose(res_skip_acts,[0,2,1])
@@ -142,23 +140,14 @@ class ResidualCouplingLayer(tf.keras.layers.Layer):
         self.snac = tf.keras.layers.Conv1D(filters=2 * self.half_channels, kernel_size=1)
 
     def call(self, x, x_mask, g=None, reverse=False,training=False):
-        # temp = tf.expand_dims(g,-1)
-        # temp = tf.transpose(temp,[0,2,1])
+
         speaker = self.snac(tf.expand_dims(g,axis=1),training=training)
-        #speaker= tf.expand_dims(speaker,-1)
-        #speaker = tf.transpose(speaker,[0,2,1])
         speaker_m, speaker_v = tf.split(speaker,2, axis=2)  # (B, half_channels, 1)
         x0, x1 = tf.split(x, [self.half_channels] * 2, axis=2)
         # x0 norm
         x0_norm = (x0 - speaker_m) * tf.exp(-speaker_v) * x_mask
-        #x0_norm = tf.transpose(x0_norm,[0,2,1])
-        #temp = tf.transpose(temp,[0,2,1])
         h =  self.pre(x0_norm,training=training) * x_mask
-        #h = tf.transpose(h,[0,2,1])
-        # don't use global condition
         h = self.enc(h, x_mask,training=training)
-        #h = tf.transpose(h,[0,2,1])
-        #temp = tf.transpose(temp,[0,2,1])
         stats =  self.post(h,training=training) * x_mask
         if not self.mean_only:
             m, logs = tf.split(stats, [self.half_channels] * 2, 1)

@@ -4,12 +4,13 @@ import numpy as np
 
 # from torch.nn import Conv1d
 # from torch.nn import ConvTranspose1d
-# from torch.nn.utils import tfa.layers.WeightNormalization
+
 # from torch.nn.utils import remove_weight_norm
 import tensorflow as tf
 import tensorflow_addons as tfa
 from .nsf import SourceModuleHnNSF
 from .bigv import init_weights, AMPBlock
+import tensorflow_probability as tfp
 
 
 class SpeakerAdapter(tf.keras.layers.Layer):
@@ -65,7 +66,7 @@ class Generator(tf.keras.layers.Layer):
         # pre conv
         self.conv_pre = tf.keras.layers.Conv1D(
             #hp.gen.upsample_input,
-                               hp.gen.upsample_initial_channel, 7, 1, padding='same'
+                               hp.gen.upsample_initial_channel, 7, 1, padding='causal'
                                #padding=3
                                )
         # nsf
@@ -79,7 +80,7 @@ class Generator(tf.keras.layers.Layer):
             # print(f'ups: {i} {k}, {u}, {(k - u) // 2}')
             # base
             self.ups.append(
-               # tfa.layers.WeightNormalization(
+               #tfp.layers.weight_norm.WeightNorm(
                     tf.keras.layers.Conv1DTranspose(
                        # hp.gen.upsample_initial_channel // (2 ** i),
                         filters=hp.gen.upsample_initial_channel // (2 ** (i + 1)),
@@ -100,7 +101,7 @@ class Generator(tf.keras.layers.Layer):
                         kernel_size=stride_f0 * 2,
                         strides=stride_f0,
                        # padding=stride_f0 // 2,
-                       padding='same'
+                       padding='causal'
                     )
                 )
             else:
@@ -123,7 +124,7 @@ class Generator(tf.keras.layers.Layer):
            # ch,
             1, 7, 1, 
            # padding=3,
-           padding='same',
+           padding='causal',
             use_bias=False)
         # weight initialization
        # self.ups.apply(init_weights)
@@ -132,9 +133,10 @@ class Generator(tf.keras.layers.Layer):
         # adapter
         x = self.adapter(x, spk,training=training)
         # nsf
-        f0 = f0[:, None]
-        f0=tf.transpose(f0,[0,2,1])
+        f0 = f0[:,:, None]
+       
         f0 =self.f0_upsamp(f0,training=training)
+        #f0=tf.transpose(f0,[0,2,1])
         #f0 = tf.transpose(temp,[0,2,1])
         har_source = self.m_source(f0,training=training)
         har_source = tf.transpose(har_source,[0,2,1])
@@ -201,7 +203,7 @@ class Generator(tf.keras.layers.Layer):
         x = self.conv_pre(x)
 
         for i in range(self.num_upsamples):
-            x = tf.keras.layers.LeakyReLU(x, 0.1)
+            x = tf.keras.layers.LeakyReLU(0.1)(x)
             # upsampling
             x = self.ups[i](x)
             # nsf

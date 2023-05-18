@@ -71,6 +71,8 @@ def load_dataset():
    
 
 def train(rank, args, chkpt_path, hp, hp_str):
+    
+    tf.random.set_seed(hp.train.seed)
     dataset = load_dataset()
     dataset = dataset.shuffle(2)
     dataset = dataset.prefetch(buffer_size=tf.data.AUTOTUNE)
@@ -99,7 +101,7 @@ def train(rank, args, chkpt_path, hp, hp_str):
     feat_loss_fn =Feat_Loss()
     score_loss_fn = Score_Loss()
     #model = GANModel(hp)
-    epochs = 2
+    epochs = 200
     for epoch in range(epochs):
         print("\nStart of epoch %d" % (epoch,))
 
@@ -113,11 +115,11 @@ def train(rank, args, chkpt_path, hp, hp_str):
             pit = pit[:len_min]
             ppg = ppg[:len_min, :]
            
-            spec = tf.transpose(spec,[0,2,1])
-            spec = tf.squeeze(spec,0)
-            spec = spec[:, :len_min]        
-            spec=tf.expand_dims(spec,0)
-            spec = tf.transpose(spec,[0,2,1])
+            # spec = tf.transpose(spec,[0,2,1])
+            # spec = tf.squeeze(spec,0)
+            spec = spec[:,:len_min,: ]        
+            # spec=tf.expand_dims(spec,0)
+            # spec = tf.transpose(spec,[0,2,1])
             ppg_l = ppg.shape[1]
             spec_l =spec.shape[1]
             with tf.GradientTape(persistent= True) as tape:
@@ -129,10 +131,8 @@ def train(rank, args, chkpt_path, hp, hp_str):
                 mel_fake = stft.mel_spectrogram(tf.expand_dims(fake_audio,1))
                 mel_real = stft.mel_spectrogram(tf.expand_dims(audio,1))
                 mel_loss = l1_loss_fn(mel_fake, mel_real) * hp.train.c_mel
-                temp1 = tf.expand_dims(fake_audio,1)
-                temp2 =tf.expand_dims(audio,1)
-            # sc_loss, mag_loss = stft_criterion(temp1,temp2 )
-                sc_mag_loss = stft_criterion(temp1,temp2 )
+                # sc_loss, mag_loss = stft_criterion(temp1,temp2 )
+                sc_mag_loss = stft_criterion(tf.expand_dims(fake_audio,1),tf.expand_dims(audio,1) )
                 #stft_loss = (sc_loss + mag_loss) * hp.train.c_stft
                 stft_loss = sc_mag_loss * hp.train.c_stft
                 res_fake, period_fake, dis_fake = model_d(fake_audio,training=True)

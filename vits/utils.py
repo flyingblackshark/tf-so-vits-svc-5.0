@@ -31,8 +31,8 @@ def f0_to_coarse(f0):
 
     f0_mel=tf.where(f0_mel <= 1,1,f0_mel)
     f0_mel=tf.where(f0_mel > f0_bin - 1,f0_bin - 1,f0_mel)
-    f0_coarse = tf.cast((f0_mel + 0.5),tf.float64) if is_torch else np.rint(f0_mel).astype(np.int)
-    assert tf.keras.backend.max(f0_coarse) <= 255 and tf.keras.backend.min(f0_coarse) >= 1, (tf.keras.backend.max(f0_coarse), tf.keras.backend.min(f0_coarse))
+    f0_coarse = tf.cast((f0_mel + 0.5),tf.int64) if is_torch else np.rint(f0_mel).astype(np.int)
+    assert tf.reduce_max(f0_coarse) <= 255 and tf.reduce_min(f0_coarse) >= 1, (tf.reduce_max(f0_coarse), tf.reduce_min(f0_coarse))
     return f0_coarse
 
 

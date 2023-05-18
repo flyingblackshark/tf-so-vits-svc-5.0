@@ -86,7 +86,7 @@ with tf.io.TFRecordWriter("./test.tfrecords") as file_writer:
         wav = wav[:, :len_wav]
         if len_min > use:
             max_frame_start = ppg.shape[0] - use - 1
-            frame_start = random.randint(0, max_frame_start)
+            frame_start = 0#random.randint(0, max_frame_start)
             frame_end = frame_start + use
 
             pit = pit[frame_start:frame_end]

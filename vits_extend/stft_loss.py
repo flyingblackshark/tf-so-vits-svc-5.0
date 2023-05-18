@@ -95,7 +95,7 @@ class STFTLoss(tf.keras.layers.Layer):
             Tensor: Log STFT magnitude loss value.
         """
         
-        x_mag = stft(x-x, fft_size=self.fft_size, hop_size=self.shift_size, win_length=self.win_length)#, self.window)
+        x_mag = stft(x=x, fft_size=self.fft_size, hop_size=self.shift_size, win_length=self.win_length)#, self.window)
         y_mag = stft(x=y, fft_size=self.fft_size, hop_size=self.shift_size, win_length=self.win_length)#, self.window)
         sc_loss = self.spectral_convergenge_loss(x_mag, y_mag)
         mag_loss = self.log_stft_magnitude_loss(x_mag, y_mag)

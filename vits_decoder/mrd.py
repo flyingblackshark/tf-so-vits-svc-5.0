@@ -4,7 +4,7 @@
 # from torch.nn.utils import weight_norm, spectral_norm
 import functools
 import tensorflow as tf
-import tensorflow_addons as tfa
+import tensorflow_probability as tfp
 class DiscriminatorR(tf.keras.layers.Layer):
     def __init__(self, hp, resolution):
         super(DiscriminatorR, self).__init__()
@@ -15,19 +15,25 @@ class DiscriminatorR(tf.keras.layers.Layer):
         #tfa.layers.WeightNormalization = weight_norm if hp.mrd.use_spectral_norm == False else spectral_norm
 
         self.convs = [
-            tfa.layers.WeightNormalization(tf.keras.layers.Conv2D(#1, 
-                                                                  filters=32, kernel_size=(3, 9), padding='same')),
-            tfa.layers.WeightNormalization(tf.keras.layers.Conv2D(#32, 
-                                                                  filters=32, kernel_size=(3, 9), strides=(1, 2), padding='same')),
-            tfa.layers.WeightNormalization(tf.keras.layers.Conv2D(#32, 
-                                                                  filters=32, kernel_size=(3, 9), strides=(1, 2), padding='same')),
-            tfa.layers.WeightNormalization(tf.keras.layers.Conv2D(#32, 
-                                                                  filters=32, kernel_size=(3, 9), strides=(1, 2), padding='same')),
-            tfa.layers.WeightNormalization(tf.keras.layers.Conv2D(#32, 
-                                                                  filters=32, kernel_size=(3, 3), padding='same')),
+           # tfp.layers.weight_norm.WeightNorm(
+            tf.keras.layers.Conv2D(#1, 
+                                                                  filters=32, kernel_size=(3, 9), padding='same'),
+          # tfp.layers.weight_norm.WeightNorm(
+            tf.keras.layers.Conv2D(#32, 
+                                                                  filters=32, kernel_size=(3, 9), strides=(1, 2), padding='same'),
+          # tfp.layers.weight_norm.WeightNorm(
+            tf.keras.layers.Conv2D(#32, 
+                                                                  filters=32, kernel_size=(3, 9), strides=(1, 2), padding='same'),
+          # tfp.layers.weight_norm.WeightNorm(
+            tf.keras.layers.Conv2D(#32, 
+                                                                  filters=32, kernel_size=(3, 9), strides=(1, 2), padding='same'),
+         # tfp.layers.weight_norm.WeightNorm(
+            tf.keras.layers.Conv2D(#32, 
+                                                                  filters=32, kernel_size=(3, 3), padding='same'),
         ]
-        self.conv_post = tfa.layers.WeightNormalization(tf.keras.layers.Conv2D(#32,
-                                                                                1, (3, 3), padding='same'))
+        self.conv_post = tf.keras.layers.Conv2D( 1, (3, 3), padding='same')
+         #tfa.layers.WeightNormalization(
+            
 
     def call(self, x,training=False):
         fmap = []
@@ -37,7 +43,7 @@ class DiscriminatorR(tf.keras.layers.Layer):
       #  x = tf.expand_dims(x,1)
         for l in self.convs:
             x = l(x,training=training)
-            #x = tf.keras.layers.LeakyReLU(self.LRELU_SLOPE)(x)
+            x = tf.keras.layers.LeakyReLU(self.LRELU_SLOPE)(x)
             fmap.append(x)
         x = self.conv_post(x,training=training)
         fmap.append(x)

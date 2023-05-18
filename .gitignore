@@ -170,3 +170,8 @@ data_svc
 dataset_raw
 data_svc/*
 dataset_raw/*
+files
+files/*
+files/train.txt
+files/valid.txt
+test.tfrecords

@@ -406,7 +406,7 @@ class SourceModuleHnNSF(tf.keras.layers.Layer):
             1)
         self.l_tanh = tf.keras.layers.Activation(tf.keras.activations.tanh)
 
-    def call(self, x):
+    def call(self, x,training=False):
         """
         Sine_source, noise_source = SourceModuleHnNSF(F0_sampled)
         F0_sampled (batchsize, length, 1)
@@ -414,6 +414,6 @@ class SourceModuleHnNSF(tf.keras.layers.Layer):
         noise_source (batchsize, length 1)
         """
         # source for harmonic branch
-        sine_wavs = self.l_sin_gen(x)
-        sine_merge = self.l_tanh(self.l_linear(sine_wavs))
+        sine_wavs = tf.stop_gradient(self.l_sin_gen(x))
+        sine_merge = self.l_tanh(self.l_linear(sine_wavs,training=training))
         return sine_merge
