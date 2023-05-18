@@ -71,7 +71,12 @@ def load_dataset():
    
 
 def train(rank, args, chkpt_path, hp, hp_str):
-    
+    #try TPU
+    resolver = tf.distribute.cluster_resolver.TPUClusterResolver(tpu='')
+    tf.config.experimental_connect_to_cluster(resolver)
+    # This is the TPU initialization code that has to be at the beginning.
+    tf.tpu.experimental.initialize_tpu_system(resolver)
+    print("All devices: ", tf.config.list_logical_devices('TPU'))
     tf.random.set_seed(hp.train.seed)
     dataset = load_dataset()
     dataset = dataset.shuffle(2)
@@ -164,8 +169,8 @@ def train(rank, args, chkpt_path, hp, hp_str):
                 res_real, period_real, dis_real = model_d(audio,training=True)
                 loss_d = d_loss_fn(res_fake + period_fake + dis_fake, res_real + period_real + dis_real)
             
-            g_gradients = tape.gradient(loss_g, model_g.trainable_variables)
-            d_gradients = tape.gradient(loss_d, model_d.trainable_variables)
+            g_gradients = tape.gradient(loss_g, model_g.trainable_variables,unconnected_gradients=tf.UnconnectedGradients.ZERO)
+            d_gradients = tape.gradient(loss_d, model_d.trainable_variables,unconnected_gradients=tf.UnconnectedGradients.ZERO)
             d_optimizer.apply_gradients(zip(d_gradients, model_d.trainable_weights))
             g_optimizer.apply_gradients(zip(g_gradients, model_g.trainable_weights))
                 #loss_d.backward()

@@ -8,7 +8,7 @@
 # import torch
 # import torch.nn.functional as F
 import tensorflow as tf
-import tensorflow_addons as tfa
+#import tensorflow_addons as tfa
 import functools
 def stft(x, fft_size, hop_size, win_length):
     """Perform STFT and convert to magnitude spectrogram.

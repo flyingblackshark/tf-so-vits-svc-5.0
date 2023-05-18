@@ -7,7 +7,7 @@ import numpy as np
 
 # from torch.nn.utils import remove_weight_norm
 import tensorflow as tf
-import tensorflow_addons as tfa
+#import tensorflow_addons as tfa
 from .nsf import SourceModuleHnNSF
 from .bigv import AMPBlock
 import tensorflow_probability as tfp
