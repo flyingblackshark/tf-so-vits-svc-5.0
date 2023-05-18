@@ -1,3 +1,13 @@
+data_svc
+dataset_raw
+data_svc/*
+dataset_raw/*
+files
+files/*
+files/train.txt
+files/valid.txt
+test.tfrecords
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
@@ -166,12 +176,3 @@ cython_debug/
 
 # Visual Studio Code
 #ignore all folders and files in  data_svc and dataset_raw
-data_svc
-dataset_raw
-data_svc/*
-dataset_raw/*
-files
-files/*
-files/train.txt
-files/valid.txt
-test.tfrecords
