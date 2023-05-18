@@ -6,8 +6,8 @@ from vits import spectrogram
 from vits import utils
 from omegaconf import OmegaConf
 def complex_to_float(complex_num):
-    real = tf.cast(tf.math.real(complex_num),dtype=tf.float32)
-    imag = tf.cast(tf.math.imag(complex_num),dtype=tf.float32)
+    real = tf.cast(tf.math.real(complex_num),dtype=tf.bfloat16)
+    imag = tf.cast(tf.math.imag(complex_num),dtype=tf.bfloat16)
     return tf.sqrt(real**2+imag**2+1e-6)
 def spectrogram_tf(y, n_fft, sampling_rate, hop_size, win_size):
     if tf.reduce_min(y) < -1.0:
@@ -46,7 +46,7 @@ def spectrogram_tf(y, n_fft, sampling_rate, hop_size, win_size):
     )
 
     #spec = tf.sqrt(tf.reduce_sum(tf.pow(spec,2),axis=-1) + 1e-6)
-    new_spec = tf.map_fn(complex_to_float,spec,dtype=tf.float32)
+    new_spec = tf.map_fn(complex_to_float,spec,dtype=tf.bfloat16)
     return new_spec
 def compute_spec(hps, filename, specname):
     audio, sampling_rate = utils.load_wav_to_torch(filename)

@@ -1,20 +1,20 @@
 import tensorflow as tf
-def clip_grad_value_(parameters, clip_value, norm_type=2):
-    if isinstance(parameters, tf.Tensor):
-        parameters = [parameters]
-    parameters = list(filter(lambda p: p.grad is not None, parameters))
-    norm_type = float(norm_type)
-    if clip_value is not None:
-        clip_value = float(clip_value)
+# def clip_grad_value_(parameters, clip_value, norm_type=2):
+#     if isinstance(parameters, tf.Tensor):
+#         parameters = [parameters]
+#     parameters = list(filter(lambda p: p.grad is not None, parameters))
+#     norm_type = float(norm_type)
+#     if clip_value is not None:
+#         clip_value = float(clip_value)
 
-    total_norm = 0
-    for p in parameters:
-        param_norm = p.grad.data.norm(norm_type)
-        total_norm += param_norm.item() ** norm_type
-        if clip_value is not None:
-            p.grad.data.clamp_(min=-clip_value, max=clip_value)
-    total_norm = total_norm ** (1.0 / norm_type)
-    return total_norm
+#     total_norm = 0
+#     for p in parameters:
+#         param_norm = p.grad.data.norm(norm_type)
+#         total_norm += param_norm.item() ** norm_type
+#         if clip_value is not None:
+#             p.grad.data.clamp_(min=-clip_value, max=clip_value)
+#     total_norm = total_norm ** (1.0 / norm_type)
+#     return total_norm
 # def mo(input_tensor, position=None, value=None):
 #     input_tensor = input_tensor.numpy()
 #     input_tensor[tuple(position)] = value

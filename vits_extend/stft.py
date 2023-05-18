@@ -71,7 +71,7 @@ class TacotronSTFT(tf.keras.Model):
         mel = librosa_mel_fn(
             sr=sampling_rate, n_fft=filter_length, n_mels=n_mel_channels, fmin=mel_fmin, fmax=mel_fmax)
 
-        self.mel_basis = tf.transpose(tf.convert_to_tensor(mel), perm=[1,0])
+        self.mel_basis = tf.cast(tf.transpose(tf.convert_to_tensor(mel), perm=[1,0]),dtype=tf.bfloat16)
         # mel = librosa_mel_fn(
         #     sr=sampling_rate, n_fft=filter_length, n_mels=n_mel_channels, fmin=mel_fmin, fmax=mel_fmax)
             # Register mel_basis buffer
@@ -103,7 +103,8 @@ class TacotronSTFT(tf.keras.Model):
     #     spec = tf.norm(spec, p=2, dim=-1)
 
     #     return spec
-   
+    
+        
     def mel_spectrogram(self, y):
         """Computes mel-spectrograms from a batch of waves
         PARAMS
@@ -116,8 +117,7 @@ class TacotronSTFT(tf.keras.Model):
         """
         assert(tf.reduce_min(y) >= -1)
         assert(tf.reduce_max(y) <= 1)
-        paddings =  tf.constant([(0,0),
-       (0,0),
+        paddings =  tf.constant([(0,0),(0,0),
         (int((self.n_fft - self.hop_size) / 2), int((self.n_fft - self.hop_size) / 2))
         ])
         y = tf.squeeze(y,-1)
@@ -125,28 +125,22 @@ class TacotronSTFT(tf.keras.Model):
             mode='CONSTANT')
         y = tf.squeeze(y,1)
         #y = tf.squeeze(y,0)
-        spec = tf.signal.stft(
-        signals = y,
+        spec =tf.signal.stft(
+        signals = tf.cast(y,dtype=tf.float32),
         fft_length=self.n_fft,
         frame_step=self.hop_size,
         frame_length=self.win_size,
         window_fn=tf.signal.hann_window,
         pad_end=False
         )
-                             # pad_end=True, window_fn=self.hann_window.read_value())
-                            #  window_fn=tf.signal.hann_window(self.win_size)) #window=self.hann_window,
-                         # center=self.center, pad_mode='reflect', normalized=False, onesided=True, return_complex=False)
-
-        #spec = tf.sqrt(tf.reduce_sum(tf.pow(spec,2))+ (1e-9))
         def complex_to_float(complex_num):
-            real = tf.cast(tf.math.real(complex_num),dtype=tf.float32)
-            imag = tf.cast(tf.math.imag(complex_num),dtype=tf.float32)
+            real = tf.cast(tf.math.real(complex_num),dtype=tf.bfloat16)
+            imag = tf.cast(tf.math.imag(complex_num),dtype=tf.bfloat16)
             return tf.sqrt(real**2+imag**2)+ 1e-9
-        spec = tf.map_fn(complex_to_float,spec,dtype=tf.float32)
+        spec = tf.map_fn(complex_to_float,spec,dtype=tf.bfloat16)
         spec = tf.matmul(spec,self.mel_basis )
         spec = self.spectral_normalize_torch(spec)
-        #spec = tfio.audio.spectrogram(y, nfft=self.n_fft, window=self.win_size, stride=self.hop_size)
-        #spec = tfio.audio.melscale(spec, rate=self.sampling_rate, mels=self.n_mel_channels, fmin=self.fmin, fmax=self.fmax)
+        spec = tf.cast(spec,dtype=tf.bfloat16)
         return spec
 
     def spectral_normalize_torch(self, magnitudes):
@@ -154,4 +148,4 @@ class TacotronSTFT(tf.keras.Model):
         return output
 
     def dynamic_range_compression_torch(self, x, C=1, clip_val=1e-5):
-        return tf.math.log(tf.clip_by_value(x, clip_value_min=clip_val,clip_value_max=tf.float32.max) * C)
+        return tf.math.log(tf.clip_by_value(x, clip_value_min=clip_val,clip_value_max=tf.bfloat16.max) * C)

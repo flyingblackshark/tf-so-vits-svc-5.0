@@ -72,8 +72,8 @@ class Generator(tf.keras.layers.Layer):
                                #padding=3
                                )
         # nsf
-        self.f0_upsamp = tf.keras.layers.UpSampling1D(
-            size=np.prod(hp.gen.upsample_rates))
+        #self.f0_upsamp = tf.keras.layers.UpSampling1D(size=3294)
+           # size=np.prod(hp.gen.upsample_rates))
         self.m_source = SourceModuleHnNSF(sampling_rate=hp.data.sampling_rate)
         self.noise_convs = []#nn.ModuleList()
         # transposed conv-based upsamplers. does not apply anti-aliasing
@@ -123,9 +123,7 @@ class Generator(tf.keras.layers.Layer):
 
         # post conv
         self.conv_post = tf.keras.layers.Conv1D(
-           # ch,
             1, 7, 1, 
-           # padding=3,
            padding='causal',
             use_bias=False)
         # weight initialization
@@ -137,14 +135,10 @@ class Generator(tf.keras.layers.Layer):
         # adapter
         x = self.adapter(x, spk,training=training)
         # nsf
-        f0 = f0[:,:, None]
-       
-        f0 =self.f0_upsamp(f0,training=training)
-        #f0=tf.transpose(f0,[0,2,1])
-        #f0 = tf.transpose(temp,[0,2,1])
+        f0 = f0[:,:, None]    
+        #f0 =self.f0_upsamp(f0,training=training)
         har_source = self.m_source(f0,training=training)
         har_source = tf.transpose(har_source,[0,2,1])
-        #x=tf.transpose(x,[0,2,1])
         
         x = self.conv_pre(x,training=training)
     

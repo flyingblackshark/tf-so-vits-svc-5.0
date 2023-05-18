@@ -12,28 +12,14 @@ class DiscriminatorS(tf.keras.layers.Layer):
     def __init__(self):
         super(DiscriminatorS, self).__init__()
         self.convs = [
-            #tfp.layers.weight_norm.WeightNorm(
-            tf.keras.layers.Conv1D(#1, 
-            16, 15, 1, padding='valid'),
-           #tfp.layers.weight_norm.WeightNorm(
-            tf.keras.layers.Conv1D(#16,
-             64, 41, 4, groups=4, padding='valid'),
-          # tfp.layers.weight_norm.WeightNorm(
-            tf.keras.layers.Conv1D(#64,
-             256, 41, 4, groups=16, padding='valid'),
-         # tfp.layers.weight_norm.WeightNorm(
-            tf.keras.layers.Conv1D(#256,
-             1024, 41, 4, groups=64, padding='valid'),
-           #tfp.layers.weight_norm.WeightNorm(
-            tf.keras.layers.Conv1D(#1024, 
-            1024, 41, 4, groups=256, padding='valid'),
-          # tfp.layers.weight_norm.WeightNorm(
-            tf.keras.layers.Conv1D(#1024,
-             1024, 5, 1, padding='valid'),
+            tf.keras.layers.Conv1D(16, 15, 1, padding='same'),
+            tf.keras.layers.Conv1D(64, 41, 4, groups=4, padding='same'),
+            tf.keras.layers.Conv1D(256, 41, 4, groups=16, padding='same'),
+            tf.keras.layers.Conv1D(1024, 41, 4, groups=64, padding='same'),
+            tf.keras.layers.Conv1D(1024, 41, 4, groups=256, padding='same'),
+            tf.keras.layers.Conv1D(1024, 5, 1, padding='same')
         ]
-        self.conv_post = tf.keras.layers.Conv1D(#1024,
-             1, 3, 1, padding='valid')
-        #tfa.layers.WeightNormalization(
+        self.conv_post = tf.keras.layers.Conv1D(1, 3, 1, padding='same')
         
 
     def call(self, x,training=False):
