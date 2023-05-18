@@ -6,11 +6,12 @@
 # from torch.nn import tf.keras.layers.Conv1D
 
 import tensorflow as tf
-import tensorflow_probability as tfp
-def init_weights(m, mean=0.0, std=0.01):
-    classname = m.__class__.__name__
-    if classname.find("Conv") != -1:
-        m.weight.data.normal_(mean, std)
+# import tensorflow_probability as tfp
+# def init_weights(m, mean=0.0, std=0.01):
+#     classname = m.__class__.__name__
+#     if classname.find("Conv") != -1:
+#         m.kernel_initializer.mean = mean
+#         m.kernel_initializer.stddev = std
 
 
 def get_padding(kernel_size, dilation=1):
@@ -23,27 +24,44 @@ class AMPBlock(tf.keras.layers.Layer):
         self.convs1 = [
            #tfp.layers.weight_norm.WeightNorm(
             tf.keras.layers.Conv1D( channels, kernel_size, 1, dilation_rate=dilation[0],
-                               padding='causal'),
+                               padding='causal',
+                               kernel_initializer='random_normal',
+                                bias_initializer='zeros'
+                               ),
            #tfp.layers.weight_norm.WeightNorm(
             tf.keras.layers.Conv1D( channels, kernel_size, 1, dilation_rate=dilation[1],
-                               padding='causal'),
+                               padding='causal',
+                               kernel_initializer='random_normal',
+                                bias_initializer='zeros'),
            #tfp.layers.weight_norm.WeightNorm(
             tf.keras.layers.Conv1D( channels, kernel_size, 1, dilation_rate=dilation[2],
-                               padding='causal')
+                               padding='causal',
+                               kernel_initializer='random_normal',
+                                bias_initializer='zeros')
         ]
-       # self.convs1.apply(init_weights)
+        # for conv in self.convs1:
+        #     init_weights(conv)
+        #self.convs1=map(self.convs1,init_weights)
 
         self.convs2 = [
            #tfp.layers.weight_norm.WeightNorm(
             tf.keras.layers.Conv1D(channels, kernel_size, 1, dilation_rate=1,
-                               padding='causal'),
+                               padding='causal',
+                               kernel_initializer='random_normal',
+                                bias_initializer='zeros'),
            #tfp.layers.weight_norm.WeightNorm(
             tf.keras.layers.Conv1D( channels, kernel_size, 1, dilation_rate=1,
-                               padding='causal'),
+                               padding='causal',
+                               kernel_initializer='random_normal',
+                                bias_initializer='zeros'),
            #tfp.layers.weight_norm.WeightNorm(
             tf.keras.layers.Conv1D(channels, kernel_size, 1, dilation_rate=1,
-                               padding='causal')
+                               padding='causal',
+                               kernel_initializer='random_normal',
+                                bias_initializer='zeros')
         ]
+        # for conv in self.convs2:
+        #     init_weights(conv)
        # self.convs2.apply(init_weights)
 
     def call(self, x,training=False):

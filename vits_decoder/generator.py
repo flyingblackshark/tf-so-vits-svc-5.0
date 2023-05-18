@@ -9,7 +9,7 @@ import numpy as np
 import tensorflow as tf
 import tensorflow_addons as tfa
 from .nsf import SourceModuleHnNSF
-from .bigv import init_weights, AMPBlock
+from .bigv import AMPBlock
 import tensorflow_probability as tfp
 
 
@@ -25,11 +25,13 @@ class SpeakerAdapter(tf.keras.layers.Layer):
         self.adapter_dim = adapter_dim
         self.epsilon = epsilon
         self.W_scale = tf.keras.layers.Dense(
-          #  self.speaker_dim, 
-            self.adapter_dim)
+            units=self.adapter_dim,
+            activation=None,
+            input_shape=(self.speaker_dim,))
         self.W_bias = tf.keras.layers.Dense(
-           # self.speaker_dim, 
-            self.adapter_dim)
+           input_shape=(self.speaker_dim,), 
+            units=self.adapter_dim,
+            activation=None)
         self.reset_parameters()
 
     def reset_parameters(self):
@@ -127,6 +129,8 @@ class Generator(tf.keras.layers.Layer):
            padding='causal',
             use_bias=False)
         # weight initialization
+        # for conv in self.ups:
+        #     init_weights(conv)
        # self.ups.apply(init_weights)
 
     def call(self, spk, x, f0,training=False):
@@ -161,9 +165,9 @@ class Generator(tf.keras.layers.Layer):
             x = xs / self.num_kernels
 
         # post conv
-        x = tf.keras.layers.LeakyReLU()(x)
+        x = tf.keras.layers.LeakyReLU(0.01)(x)
 
-        x = self.conv_post(x)
+        x = self.conv_post(x,training=training)
 
         x = tf.tanh(x)
         #x=tf.transpose(x,[0,2,1])
@@ -219,7 +223,7 @@ class Generator(tf.keras.layers.Layer):
             x = xs / self.num_kernels
 
         # post conv
-        x = tf.keras.layers.LeakyReLU(x)
+        x = tf.keras.layers.LeakyReLU(0.01)(x)
         x = self.conv_post(x)
         x = tf.tanh(x)
         return x

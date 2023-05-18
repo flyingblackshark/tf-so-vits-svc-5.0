@@ -402,8 +402,9 @@ class SourceModuleHnNSF(tf.keras.layers.Layer):
 
         # to merge source harmonics into a single excitation
         self.l_linear = tf.keras.layers.Dense(
-           # harmonic_num + 1, 
-            1)
+           input_shape=(harmonic_num + 1,), 
+            units=1,
+            activation=None)
         self.l_tanh = tf.keras.layers.Activation(tf.keras.activations.tanh)
 
     def call(self, x,training=False):

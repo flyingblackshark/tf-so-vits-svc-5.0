@@ -22,7 +22,7 @@ def stft(x, fft_size, hop_size, win_length):
         Tensor: Magnitude spectrogram (B, #frames, fft_size // 2 + 1).
     """
     x =tf.squeeze(x,-1)
-    x_stft = tf.signal.stft(signals=x, frame_length=win_length, frame_step=hop_size,fft_length=fft_size,window_fn=functools.partial(tf.signal.hann_window, periodic=True))
+    x_stft = tf.signal.stft(signals=x, frame_length=win_length, frame_step=hop_size,fft_length=fft_size,window_fn=tf.signal.hann_window)
     real = tf.math.real(x_stft)#x_stft[..., 0]
     imag = tf.math.imag(x_stft)#x_stft[..., 1]
     real=tf.cast(real,tf.float32)
@@ -72,7 +72,7 @@ class LogSTFTMagnitudeLoss(tf.keras.losses.Loss):
         return tf.keras.losses.mean_absolute_error(tf.math.log(y_mag), tf.math.log(x_mag))
 
 
-class STFTLoss(tf.keras.layers.Layer):
+class STFTLoss(tf.keras.losses.Loss):
     """STFT loss module."""
 
     def __init__(self, fft_size=1024, shift_size=120, win_length=600):#, window="hann_window"):
@@ -100,45 +100,45 @@ class STFTLoss(tf.keras.layers.Layer):
         sc_loss = self.spectral_convergenge_loss(x_mag, y_mag)
         mag_loss = self.log_stft_magnitude_loss(x_mag, y_mag)
 
-        return sc_loss, mag_loss
+        return sc_loss+mag_loss
 
 
-class MultiResolutionSTFTLoss(tf.keras.Model):
-    """Multi resolution STFT loss module."""
+# class MultiResolutionSTFTLoss(tf.keras.Model):
+#     """Multi resolution STFT loss module."""
 
-    def __init__(self,
-                 resolutions,):
-               #  window="hann_window"):
-        """Initialize Multi resolution STFT loss module.
-        Args:
-            resolutions (list): List of (FFT size, hop size, window length).
-            window (str): Window function type.
-        """
-        super(MultiResolutionSTFTLoss, self).__init__()
-        self.stft_losses = []#torch.nn.ModuleList()
-        for fs, ss, wl in resolutions:
-            #self.stft_losses += [STFTLoss(fs, ss, wl)]
-            self.stft_losses.append(STFTLoss(fs, ss, wl))
+#     def __init__(self,
+#                  resolutions,):
+#                #  window="hann_window"):
+#         """Initialize Multi resolution STFT loss module.
+#         Args:
+#             resolutions (list): List of (FFT size, hop size, window length).
+#             window (str): Window function type.
+#         """
+#         super(MultiResolutionSTFTLoss, self).__init__()
+#         self.stft_losses = []#torch.nn.ModuleList()
+#         for fs, ss, wl in resolutions:
+#             #self.stft_losses += [STFTLoss(fs, ss, wl)]
+#             self.stft_losses.append(STFTLoss(fs, ss, wl))
 
-    def call(self, x, y):
-        """Calculate forward propagation.
-        Args:
-            x (Tensor): Predicted signal (B, T).
-            y (Tensor): Groundtruth signal (B, T).
-        Returns:
-            Tensor: Multi resolution spectral convergence loss value.
-            Tensor: Multi resolution log STFT magnitude loss value.
-        """
-        sc_loss = 0.0
-        mag_loss = 0.0
-        for f in self.stft_losses:
-            sc_l, mag_l = f(x, y)
-            sc_loss += sc_l
-            mag_loss += mag_l
+#     def call(self, x, y):
+#         """Calculate forward propagation.
+#         Args:
+#             x (Tensor): Predicted signal (B, T).
+#             y (Tensor): Groundtruth signal (B, T).
+#         Returns:
+#             Tensor: Multi resolution spectral convergence loss value.
+#             Tensor: Multi resolution log STFT magnitude loss value.
+#         """
+#         sc_loss = 0.0
+#         mag_loss = 0.0
+#         for f in self.stft_losses:
+#             sc_l, mag_l = f(x, y)
+#             sc_loss += sc_l
+#             mag_loss += mag_l
 
-        sc_loss /= len(self.stft_losses)
-        mag_loss /= len(self.stft_losses)
+#         sc_loss /= len(self.stft_losses)
+#         mag_loss /= len(self.stft_losses)
 
-       # return sc_loss, mag_loss
-        return sc_loss + mag_loss # for test purpose
+#        # return sc_loss, mag_loss
+#         return sc_loss + mag_loss # for test purpose
         

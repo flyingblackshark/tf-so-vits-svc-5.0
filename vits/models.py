@@ -122,7 +122,6 @@ class PosteriorEncoder(tf.keras.layers.Layer):
     def call(self, x, x_lengths, g=None,training=False):
         x_mask = tf.expand_dims(tf.sequence_mask(x_lengths, x.shape[1],dtype=tf.float32), 1)
         x_mask =tf.expand_dims(x_mask,0)
-        #x_mask=tf.cast(x_mask,dtype=tf.float32)
         x = self.pre(x,training=training) * x_mask
         x = self.enc(x, x_mask, g=g,training=training)
         stats = self.proj(x,training=training) * x_mask
@@ -143,7 +142,7 @@ class SynthesizerTrn(tf.keras.Model):
     ):
         super().__init__()
         self.segment_size = segment_size
-        self.emb_g = tf.keras.layers.Dense(hp.vits.gin_channels)
+        self.emb_g = tf.keras.layers.Dense(hp.vits.gin_channels,input_shape=(hp.vits.spk_dim,),activation=None)
         self.enc_p = TextEncoder(
             #hp.vits.ppg_dim,
             hp.vits.inter_channels,

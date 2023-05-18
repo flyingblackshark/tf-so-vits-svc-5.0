@@ -22,16 +22,16 @@ f0_mel_max = 1127 * np.log(1 + f0_max / 700)
 
 
 def f0_to_coarse(f0):
-    is_torch = isinstance(f0, tf.Tensor)
-    f0_mel = 1127 * tf.math.log((1 + f0 / 700)) if is_torch else 1127 * \
-        np.log(1 + f0 / 700)
+    #  is_torch = isinstance(f0, tf.Tensor)
+    f0_mel = 1127 * tf.math.log((1 + f0 / 700)) 
+    # if is_torch else 1127 * \
+    #     np.log(1 + f0 / 700)
     
-    f0_mel=tf.where(f0_mel > 0, (f0_mel - f0_mel_min) * \
-    (f0_bin - 2) / (f0_mel_max - f0_mel_min) + 1,f0_mel)
+    f0_mel=tf.where(f0_mel > 0, (f0_mel - f0_mel_min) * (f0_bin - 2) / (f0_mel_max - f0_mel_min) + 1,f0_mel)
 
     f0_mel=tf.where(f0_mel <= 1,1,f0_mel)
     f0_mel=tf.where(f0_mel > f0_bin - 1,f0_bin - 1,f0_mel)
-    f0_coarse = tf.cast((f0_mel + 0.5),tf.int64) if is_torch else np.rint(f0_mel).astype(np.int)
+    f0_coarse = tf.cast((f0_mel + 0.5),tf.int64) #if is_torch else np.rint(f0_mel).astype(np.int)
     assert tf.reduce_max(f0_coarse) <= 255 and tf.reduce_min(f0_coarse) >= 1, (tf.reduce_max(f0_coarse), tf.reduce_min(f0_coarse))
     return f0_coarse
 

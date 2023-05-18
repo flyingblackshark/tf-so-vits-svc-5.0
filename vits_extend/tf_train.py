@@ -4,7 +4,7 @@ from vits.losses import kl_loss
 from vits.models import SynthesizerTrn
 from vits_decoder.discriminator import Discriminator
 from vits_extend.stft import TacotronSTFT
-from vits_extend.stft_loss import MultiResolutionSTFTLoss
+from vits_extend.stft_loss import STFTLoss
 
 
 
@@ -85,7 +85,7 @@ def train(rank, args, chkpt_path, hp, hp_str):
     model_d=Discriminator(hp)
     d_optimizer=tf.keras.optimizers.AdamW(learning_rate=hp.train.learning_rate, beta_1=hp.train.betas[0],beta_2=hp.train.betas[1], epsilon=hp.train.eps)
     g_optimizer=tf.keras.optimizers.AdamW(learning_rate=hp.train.learning_rate, beta_1=hp.train.betas[0],beta_2=hp.train.betas[1], epsilon=hp.train.eps)
-    stft_criterion = MultiResolutionSTFTLoss(eval(hp.mrd.resolutions))
+    #stft_criterion = MultiResolutionSTFTLoss(eval(hp.mrd.resolutions))
     
     stft = TacotronSTFT(filter_length=hp.data.filter_length,
                         hop_length=hp.data.hop_length,
@@ -107,22 +107,23 @@ def train(rank, args, chkpt_path, hp, hp_str):
 
         # Iterate over the batches of the dataset.
         for step, (spec,wav,ppg,pit,spk) in enumerate(dataset):
-            #audio = tf.transpose(wav,[0,1,3,2])
-            audio = tf.squeeze(wav,0)
-            len_pit = pit.shape[1]
-            len_ppg = ppg.shape[1]
-            len_min = min(len_pit,len_ppg)  
-            pit = pit[:len_min]
-            ppg = ppg[:len_min, :]
-           
-            # spec = tf.transpose(spec,[0,2,1])
-            # spec = tf.squeeze(spec,0)
-            spec = spec[:,:len_min,: ]        
-            # spec=tf.expand_dims(spec,0)
-            # spec = tf.transpose(spec,[0,2,1])
-            ppg_l = ppg.shape[1]
-            spec_l =spec.shape[1]
             with tf.GradientTape(persistent= True) as tape:
+                #audio = tf.transpose(wav,[0,1,3,2])
+                audio = tf.squeeze(wav,0)
+                len_pit = pit.shape[1]
+                len_ppg = ppg.shape[1]
+                len_min = min(len_pit,len_ppg)  
+                pit = pit[:len_min]
+                ppg = ppg[:len_min, :]
+            
+                # spec = tf.transpose(spec,[0,2,1])
+                # spec = tf.squeeze(spec,0)
+                spec = spec[:,:len_min,: ]        
+                # spec=tf.expand_dims(spec,0)
+                # spec = tf.transpose(spec,[0,2,1])
+                ppg_l = ppg.shape[1]
+                spec_l =spec.shape[1]
+          
                 fake_audio, ids_slice, z_mask, \
                     (z_f, z_r, z_p, m_p, logs_p, z_q, m_q, logs_q, logdet_f, logdet_r) = model_g(
                         ppg, pit, spec, spk, ppg_l, spec_l,training=True)
@@ -132,7 +133,20 @@ def train(rank, args, chkpt_path, hp, hp_str):
                 mel_real = stft.mel_spectrogram(tf.expand_dims(audio,1))
                 mel_loss = l1_loss_fn(mel_fake, mel_real) * hp.train.c_mel
                 # sc_loss, mag_loss = stft_criterion(temp1,temp2 )
-                sc_mag_loss = stft_criterion(tf.expand_dims(fake_audio,1),tf.expand_dims(audio,1) )
+                def sc_mag_loss_fn( x, y):
+                        sc_mag_loss = 0.0
+                        for f in stft_losses:
+                            sc_mag_l = f(x, y)
+                            sc_mag_loss += sc_mag_l
+
+                        sc_mag_l /= len(stft_losses)
+                        return sc_mag_loss
+                stft_losses = []#torch.nn.ModuleList()
+                for fs, ss, wl in eval(hp.mrd.resolutions):
+                    stft_losses.append(STFTLoss(fs, ss, wl))
+                    
+        
+                sc_mag_loss = sc_mag_loss_fn(tf.expand_dims(fake_audio,1),tf.expand_dims(audio,1) )
                 #stft_loss = (sc_loss + mag_loss) * hp.train.c_stft
                 stft_loss = sc_mag_loss * hp.train.c_stft
                 res_fake, period_fake, dis_fake = model_d(fake_audio,training=True)
@@ -149,10 +163,11 @@ def train(rank, args, chkpt_path, hp, hp_str):
                 res_fake, period_fake, dis_fake = model_d(fake_audio,training=True)
                 res_real, period_real, dis_real = model_d(audio,training=True)
                 loss_d = d_loss_fn(res_fake + period_fake + dis_fake, res_real + period_real + dis_real)
-            gradients = tape.gradient(loss_d, model_d.trainable_variables,unconnected_gradients=tf.UnconnectedGradients.ZERO)
-            d_optimizer.apply_gradients(zip(gradients, model_d.trainable_weights))
-            gradients = tape.gradient(loss_g, model_g.trainable_variables,unconnected_gradients=tf.UnconnectedGradients.ZERO)
-            g_optimizer.apply_gradients(zip(gradients, model_g.trainable_weights))
+            
+            g_gradients = tape.gradient(loss_g, model_g.trainable_variables)
+            d_gradients = tape.gradient(loss_d, model_d.trainable_variables)
+            d_optimizer.apply_gradients(zip(d_gradients, model_d.trainable_weights))
+            g_optimizer.apply_gradients(zip(g_gradients, model_g.trainable_weights))
                 #loss_d.backward()
                 #clip_grad_value_(model_d.parameters(),  None)
             loss_g = loss_g

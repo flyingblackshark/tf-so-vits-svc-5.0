@@ -32,6 +32,7 @@ from librosa.util import normalize
 from scipy.io.wavfile import read
 import librosa
 import tensorflow_io as tfio
+from librosa.filters import mel as librosa_mel_fn
 
 # def mel_filterbank(sr, n_mels, n_fft, fmin, fmax):
 #   """Computes the mel filterbank.
@@ -54,10 +55,10 @@ import tensorflow_io as tfio
 #   mel_filterbank = librosa.filters.mel(sr=sr, n_mels=n_mels, n_fft=n_fft, fmin=fmin, fmax=fmax)
 
 #   return mel_filterbank
-class TacotronSTFT(tf.Module):
+class TacotronSTFT(tf.keras.Model):
     def __init__(self, filter_length=512, hop_length=160, win_length=512,
                  n_mel_channels=80, sampling_rate=16000, mel_fmin=0.0,
-                 mel_fmax=None, center=False, device='cpu'):
+                 mel_fmax=None, center=False):
         super(TacotronSTFT, self).__init__()
         self.n_mel_channels = n_mel_channels
         self.sampling_rate = sampling_rate
@@ -67,7 +68,10 @@ class TacotronSTFT(tf.Module):
         self.fmin = mel_fmin
         self.fmax = mel_fmax
         self.center = center
+        mel = librosa_mel_fn(
+            sr=sampling_rate, n_fft=filter_length, n_mels=n_mel_channels, fmin=mel_fmin, fmax=mel_fmax)
 
+        self.mel_basis = tf.transpose(tf.convert_to_tensor(mel), perm=[1,0])
         # mel = librosa_mel_fn(
         #     sr=sampling_rate, n_fft=filter_length, n_mels=n_mel_channels, fmin=mel_fmin, fmax=mel_fmax)
             # Register mel_basis buffer
@@ -99,7 +103,7 @@ class TacotronSTFT(tf.Module):
     #     spec = tf.norm(spec, p=2, dim=-1)
 
     #     return spec
-
+   
     def mel_spectrogram(self, y):
         """Computes mel-spectrograms from a batch of waves
         PARAMS
@@ -121,23 +125,33 @@ class TacotronSTFT(tf.Module):
             mode='CONSTANT')
         y = tf.squeeze(y,1)
         #y = tf.squeeze(y,0)
-        # spec = tf.signal.stft(y, frame_length = self.n_fft, frame_step=self.hop_size)
-        #                      # pad_end=True, window_fn=self.hann_window.read_value())
-        #                     #  window_fn=tf.signal.hann_window(self.win_size)) #window=self.hann_window,
-        #                  # center=self.center, pad_mode='reflect', normalized=False, onesided=True, return_complex=False)
+        spec = tf.signal.stft(
+        signals = y,
+        fft_length=self.n_fft,
+        frame_step=self.hop_size,
+        frame_length=self.win_size,
+        window_fn=tf.signal.hann_window,
+        pad_end=False
+        )
+                             # pad_end=True, window_fn=self.hann_window.read_value())
+                            #  window_fn=tf.signal.hann_window(self.win_size)) #window=self.hann_window,
+                         # center=self.center, pad_mode='reflect', normalized=False, onesided=True, return_complex=False)
 
-        # #spec = tf.sqrt(tf.reduce_sum(tf.pow(spec,2))+ (1e-9))
-        # spec = tf.math.sqrt(tf.reduce_sum(spec**2, axis=-1) + 1e-9)
-        # spec = tf.cast(spec, tf.float32)
-        # spec = tf.matmul(self.mel_basis, spec)
-        # spec = self.spectral_normalize_torch(spec)
-        spec = tfio.audio.spectrogram(y, nfft=self.n_fft, window=self.win_size, stride=self.hop_size)
-        spec = tfio.audio.melscale(spec, rate=self.sampling_rate, mels=self.n_mel_channels, fmin=self.fmin, fmax=self.fmax)
+        #spec = tf.sqrt(tf.reduce_sum(tf.pow(spec,2))+ (1e-9))
+        def complex_to_float(complex_num):
+            real = tf.cast(tf.math.real(complex_num),dtype=tf.float32)
+            imag = tf.cast(tf.math.imag(complex_num),dtype=tf.float32)
+            return tf.sqrt(real**2+imag**2)+ 1e-9
+        spec = tf.map_fn(complex_to_float,spec,dtype=tf.float32)
+        spec = tf.matmul(spec,self.mel_basis )
+        spec = self.spectral_normalize_torch(spec)
+        #spec = tfio.audio.spectrogram(y, nfft=self.n_fft, window=self.win_size, stride=self.hop_size)
+        #spec = tfio.audio.melscale(spec, rate=self.sampling_rate, mels=self.n_mel_channels, fmin=self.fmin, fmax=self.fmax)
         return spec
 
-    # def spectral_normalize_torch(self, magnitudes):
-    #     output = self.dynamic_range_compression_torch(magnitudes)
-    #     return output
+    def spectral_normalize_torch(self, magnitudes):
+        output = self.dynamic_range_compression_torch(magnitudes)
+        return output
 
-    # def dynamic_range_compression_torch(self, x, C=1, clip_val=1e-5):
-    #     return tf.math.log(tf.clip_by_value(x, clip_value_min=clip_val) * C)
+    def dynamic_range_compression_torch(self, x, C=1, clip_val=1e-5):
+        return tf.math.log(tf.clip_by_value(x, clip_value_min=clip_val,clip_value_max=tf.float32.max) * C)

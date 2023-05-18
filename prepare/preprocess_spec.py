@@ -35,14 +35,8 @@ def spectrogram_tf(y, n_fft, sampling_rate, hop_size, win_size):
         fft_length=n_fft,
         frame_step=hop_size,
         frame_length=win_size,
-        #window=hann_window[wnsize_dtype_device],
         window_fn=tf.signal.hann_window,
         pad_end=False
-       # center=center,
-        #pad_mode="reflect",
-       # normalized=False,
-       # onesided=True,
-       # return_complex=False,
     )
 
     #spec = tf.sqrt(tf.reduce_sum(tf.pow(spec,2),axis=-1) + 1e-6)
