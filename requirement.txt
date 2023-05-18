@@ -1,2 +1,3 @@
 omegaconf
 scipy
+librosa
