@@ -57,7 +57,7 @@ def load_dataset():
     ignore_order = tf.data.Options()
     ignore_order.experimental_deterministic = False  # disable order, increase speed
     dataset = tf.data.TFRecordDataset(
-        "/content/test.tfrecords"
+        "gs://example-test-dev-abc/test.tfrecords"
     )  # automatically interleaves reads from multiple files
     dataset = dataset.with_options(
         ignore_order
