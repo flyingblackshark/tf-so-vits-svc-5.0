@@ -1,6 +1,6 @@
 
 import tensorflow as tf
-import tensorflow_probability as tfp
+#import tensorflow_probability as tfp
 from vits.losses import fused_add_tanh_sigmoid_multiply
 
 class Flip(tf.keras.layers.Layer):

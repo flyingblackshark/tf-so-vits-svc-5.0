@@ -10,7 +10,7 @@ import tensorflow as tf
 #import tensorflow_addons as tfa
 from .nsf import SourceModuleHnNSF
 from .bigv import AMPBlock
-import tensorflow_probability as tfp
+#import tensorflow_probability as tfp
 
 
 class SpeakerAdapter(tf.keras.layers.Layer):

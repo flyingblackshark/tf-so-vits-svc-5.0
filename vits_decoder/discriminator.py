@@ -6,7 +6,7 @@ from omegaconf import OmegaConf
 from .mpd import MultiPeriodDiscriminator
 from .mrd import MultiResolutionDiscriminator
 import tensorflow as tf
-import tensorflow_probability as tfp
+#import tensorflow_probability as tfp
 
 class DiscriminatorS(tf.keras.Model):
     def __init__(self):

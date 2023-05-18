@@ -4,7 +4,7 @@
 # from torch.nn.utils import weight_norm, spectral_norm
 import functools
 import tensorflow as tf
-import tensorflow_probability as tfp
+#import tensorflow_probability as tfp
 class DiscriminatorR(tf.keras.layers.Layer):
     def __init__(self, hp, resolution):
         super(DiscriminatorR, self).__init__()
