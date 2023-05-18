@@ -377,7 +377,7 @@ class Encoder(tf.keras.layers.Layer):
 #         return tf.expand_dims(tf.expand_dims(-tf.math.log1p(tf.abs(diff)), 0), 0)
 
 
-class FFN(tf.keras.Model):
+class FFN(tf.keras.layers.Layer):
     def __init__(
         self,
        # in_channels,

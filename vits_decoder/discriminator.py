@@ -8,31 +8,31 @@ from .mrd import MultiResolutionDiscriminator
 import tensorflow as tf
 #import tensorflow_probability as tfp
 
-class DiscriminatorS(tf.keras.Model):
+class DiscriminatorS(tf.keras.layers.Layer):
     def __init__(self):
         super(DiscriminatorS, self).__init__()
         self.convs = [
             #tfp.layers.weight_norm.WeightNorm(
             tf.keras.layers.Conv1D(#1, 
-            16, 15, 1, padding='causal'),
+            16, 15, 1, padding='valid'),
            #tfp.layers.weight_norm.WeightNorm(
             tf.keras.layers.Conv1D(#16,
-             64, 41, 4, groups=4, padding='causal'),
+             64, 41, 4, groups=4, padding='valid'),
           # tfp.layers.weight_norm.WeightNorm(
             tf.keras.layers.Conv1D(#64,
-             256, 41, 4, groups=16, padding='causal'),
+             256, 41, 4, groups=16, padding='valid'),
          # tfp.layers.weight_norm.WeightNorm(
             tf.keras.layers.Conv1D(#256,
-             1024, 41, 4, groups=64, padding='causal'),
+             1024, 41, 4, groups=64, padding='valid'),
            #tfp.layers.weight_norm.WeightNorm(
             tf.keras.layers.Conv1D(#1024, 
-            1024, 41, 4, groups=256, padding='causal'),
+            1024, 41, 4, groups=256, padding='valid'),
           # tfp.layers.weight_norm.WeightNorm(
             tf.keras.layers.Conv1D(#1024,
-             1024, 5, 1, padding='causal'),
+             1024, 5, 1, padding='valid'),
         ]
         self.conv_post = tf.keras.layers.Conv1D(#1024,
-             1, 3, 1, padding='causal')
+             1, 3, 1, padding='valid')
         #tfa.layers.WeightNormalization(
         
 

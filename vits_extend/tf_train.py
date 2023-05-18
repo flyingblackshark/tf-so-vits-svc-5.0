@@ -6,11 +6,6 @@ from vits_decoder.discriminator import Discriminator
 from vits_extend.stft import TacotronSTFT
 from vits_extend.stft_loss import STFTLoss
 
-
-
-
-
-
 class Score_Loss(tf.keras.losses.Loss):
     def call(self,y_pred,y_true):
         score_loss = 0.0
