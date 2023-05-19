@@ -24,7 +24,7 @@ class TextEncoder(tf.keras.layers.Layer):
                  p_dropout):
         super().__init__()
         self.out_channels = out_channels
-        self.pre = tf.keras.layers.Conv1D(filters=hidden_channels, kernel_size=5, padding='causal')
+        self.pre = tf.keras.layers.Conv1D(filters=hidden_channels, kernel_size=5, padding='same')
         self.pit = tf.keras.layers.Embedding(256, hidden_channels)
         self.enc = attentions.Encoder(
             hidden_channels,

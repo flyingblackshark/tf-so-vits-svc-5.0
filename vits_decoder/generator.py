@@ -1,11 +1,5 @@
-#import torch
-#import torch.nn as nn
+
 import numpy as np
-
-# from torch.nn import Conv1d
-# from torch.nn import ConvTranspose1d
-
-# from torch.nn.utils import remove_weight_norm
 import tensorflow as tf
 #import tensorflow_addons as tfa
 from .nsf import SourceModuleHnNSF
@@ -36,23 +30,19 @@ class SpeakerAdapter(tf.keras.layers.Layer):
 
     def reset_parameters(self):
         self.W_scale.kernel_initializer=tf.keras.initializers.Zeros()
-        self.W_scale.bias_initializer=tf.keras.initializers.constant(1.0)
+        self.W_scale.bias_initializer=tf.keras.initializers.Constant(1.)
         self.W_bias.kernel_initializer=tf.keras.initializers.Zeros()
         self.W_bias.bias_initializer=tf.keras.initializers.Zeros()
 
     def call(self, x, speaker_embedding,training=False):
-        #x = x.transpose(1, -1)
-        #x = tf.transpose(x,[0,2,1])
-        mean = tf.math.reduce_mean(x,axis=-1, keepdims=True)
-        var = tf.math.reduce_mean(((x - mean) ** 2),axis=-1, keepdims=True)
+        mean = tf.reduce_mean(x,axis=-1, keepdims=True)
+        var = tf.reduce_mean(((x - mean) ** 2),axis=-1, keepdims=True)
         std = tf.sqrt(var + self.epsilon)
         y = (x - mean) / std
         scale = self.W_scale(speaker_embedding,training=training)
         bias = self.W_bias(speaker_embedding,training=training)
-       # y =  tf.transpose(y,[0,2,1])
         y *= tf.expand_dims(scale,1)
         y += tf.expand_dims(bias,1)
-       # y = tf.transpose(y,[0,2,1])
         return y
 
 
@@ -66,11 +56,7 @@ class Generator(tf.keras.layers.Layer):
         # speaker adaper, 256 should change by what speaker encoder you use
         self.adapter = SpeakerAdapter(hp.vits.spk_dim, hp.gen.upsample_input)
         # pre conv
-        self.conv_pre = tf.keras.layers.Conv1D(
-            #hp.gen.upsample_input,
-                               hp.gen.upsample_initial_channel, 7, 1, padding='causal'
-                               #padding=3
-                               )
+        self.conv_pre = tf.keras.layers.Conv1D(hp.gen.upsample_initial_channel, 7, 1, padding='same')
         # nsf
         #self.f0_upsamp = tf.keras.layers.UpSampling1D(size=3294)
            # size=np.prod(hp.gen.upsample_rates))
@@ -88,7 +74,6 @@ class Generator(tf.keras.layers.Layer):
                         filters=hp.gen.upsample_initial_channel // (2 ** (i + 1)),
                         kernel_size=k,
                         strides=u,
-                        #padding=(k - u) // 2)
                         padding='same')
                # )
             )
@@ -103,7 +88,7 @@ class Generator(tf.keras.layers.Layer):
                         kernel_size=stride_f0 * 2,
                         strides=stride_f0,
                        # padding=stride_f0 // 2,
-                       padding='causal'
+                       padding='same'
                     )
                 )
             else:
@@ -124,7 +109,7 @@ class Generator(tf.keras.layers.Layer):
         # post conv
         self.conv_post = tf.keras.layers.Conv1D(
             1, 7, 1, 
-           padding='causal',
+           padding='same',
             use_bias=False)
         # weight initialization
         # for conv in self.ups:

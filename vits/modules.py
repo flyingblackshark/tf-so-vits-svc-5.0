@@ -45,7 +45,7 @@ class WN(tf.keras.layers.Layer):
                 filters=2 * hidden_channels,
                 kernel_size=kernel_size,
                 dilation_rate=dilation,
-                padding='causal'
+                padding='same'
                 #padding=padding,
             )
             #in_layer = tfp.layers.weight_norm.WeightNorm(in_layer)

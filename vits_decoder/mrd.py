@@ -4,7 +4,7 @@
 # from torch.nn.utils import weight_norm, spectral_norm
 import functools
 import tensorflow as tf
-#import tensorflow_probability as tfp
+import tensorflow_addons as tfa
 class DiscriminatorR(tf.keras.layers.Layer):
     def __init__(self, hp, resolution):
         super(DiscriminatorR, self).__init__()
@@ -15,24 +15,19 @@ class DiscriminatorR(tf.keras.layers.Layer):
         #tfa.layers.WeightNormalization = weight_norm if hp.mrd.use_spectral_norm == False else spectral_norm
 
         self.convs = [
-           # tfp.layers.weight_norm.WeightNorm(
-            tf.keras.layers.Conv2D(#1, 
-                                                                  filters=32, kernel_size=(3, 9), padding='same'),
-          # tfp.layers.weight_norm.WeightNorm(
-            tf.keras.layers.Conv2D(#32, 
-                                                                  filters=32, kernel_size=(3, 9), strides=(1, 2), padding='same'),
-          # tfp.layers.weight_norm.WeightNorm(
-            tf.keras.layers.Conv2D(#32, 
-                                                                  filters=32, kernel_size=(3, 9), strides=(1, 2), padding='same'),
-          # tfp.layers.weight_norm.WeightNorm(
-            tf.keras.layers.Conv2D(#32, 
-                                                                  filters=32, kernel_size=(3, 9), strides=(1, 2), padding='same'),
-         # tfp.layers.weight_norm.WeightNorm(
-            tf.keras.layers.Conv2D(#32, 
-                                                                  filters=32, kernel_size=(3, 3), padding='same'),
+            tfa.layers.SpectralNormalization(
+            tf.keras.layers.Conv2D(filters=32, kernel_size=(3, 9), padding='same')),
+            tfa.layers.SpectralNormalization(
+            tf.keras.layers.Conv2D(filters=32, kernel_size=(3, 9), strides=(1, 2), padding='same')),
+            tfa.layers.SpectralNormalization(
+            tf.keras.layers.Conv2D(filters=32, kernel_size=(3, 9), strides=(1, 2), padding='same')),
+            tfa.layers.SpectralNormalization(
+            tf.keras.layers.Conv2D(filters=32, kernel_size=(3, 9), strides=(1, 2), padding='same')),
+            tfa.layers.SpectralNormalization(
+            tf.keras.layers.Conv2D( filters=32, kernel_size=(3, 3), padding='same')),
         ]
-        self.conv_post = tf.keras.layers.Conv2D( 1, (3, 3), padding='same')
-         #tfa.layers.WeightNormalization(
+        self.conv_post = tfa.layers.SpectralNormalization(tf.keras.layers.Conv2D( 1, (3, 3), padding='same'))
+       
             
 
     def call(self, x,training=False):
@@ -40,14 +35,12 @@ class DiscriminatorR(tf.keras.layers.Layer):
         
         x = self.spectrogram(x)
         x = tf.expand_dims(x,1)
-      #  x = tf.expand_dims(x,1)
         for l in self.convs:
             x = l(x,training=training)
             x = tf.keras.layers.LeakyReLU(self.LRELU_SLOPE)(x)
             fmap.append(x)
         x = self.conv_post(x,training=training)
         fmap.append(x)
-        #x = torch.flatten(x, 1, -1)
         x = tf.reshape(x,[x.shape[0],-1])
         return fmap, x
 
@@ -57,8 +50,7 @@ class DiscriminatorR(tf.keras.layers.Layer):
         x = tf.squeeze(x,-1)
         x = tf.signal.stft(signals=tf.cast(x,tf.float32), frame_length=win_length, frame_step=hop_length, fft_length=n_fft,window_fn=tf.signal.hann_window)
 
-        mag = tf.map_fn(complex_to_float,x,dtype=tf.bfloat16)#tf.cast(x,dtype=tf.float32)
-       # mag = tf.norm(x, ord=2, axis =-1) #[B, F, TT]
+        mag = tf.map_fn(complex_to_float,x,dtype=tf.bfloat16)
 
         return mag
 

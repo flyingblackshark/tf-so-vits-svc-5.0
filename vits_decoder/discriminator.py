@@ -8,42 +8,18 @@ from .mrd import MultiResolutionDiscriminator
 import tensorflow as tf
 #import tensorflow_probability as tfp
 
-class DiscriminatorS(tf.keras.layers.Layer):
-    def __init__(self):
-        super(DiscriminatorS, self).__init__()
-        self.convs = [
-            tf.keras.layers.Conv1D(16, 15, 1, padding='same'),
-            tf.keras.layers.Conv1D(64, 41, 4,padding='same'),
-            tf.keras.layers.Conv1D(256, 41, 4,  padding='same'),
-            tf.keras.layers.Conv1D(1024, 41, 4, padding='same'),
-            tf.keras.layers.Conv1D(1024, 41, 4, padding='same'),
-            tf.keras.layers.Conv1D(1024, 5, 1, padding='same')
-        ]
-        self.conv_post = tf.keras.layers.Conv1D(1, 3, 1, padding='same')
-        
-
-    def call(self, x,training=False):
-        fmap = []
-        for l in self.convs:
-            x = l(x,training=training)
-            x = tf.keras.layers.LeakyReLU(0.1)(x)
-            fmap.append(x)
-        x = self.conv_post(x,training=training)
-        fmap.append(x)
-        #x = torch.flatten(x, 1, -1)
-        x = tf.reshape(x,[x.shape[0],-1])
-        return [(fmap, x)]
-
-
 class Discriminator(tf.keras.Model):
     def __init__(self, hp):
         super(Discriminator, self).__init__()
         self.MRD = MultiResolutionDiscriminator(hp)
         self.MPD = MultiPeriodDiscriminator(hp)
-        self.DIS = DiscriminatorS()
+
 
     def call(self, x):
-        return self.MRD(x), self.MPD(x), self.DIS(x)
+        r = self.MRD(x)
+        p = self.MPD(x)
+
+        return r + p
 
 
 if __name__ == '__main__':

@@ -24,18 +24,18 @@ class AMPBlock(tf.keras.layers.Layer):
         self.convs1 = [
            #tfp.layers.weight_norm.WeightNorm(
             tf.keras.layers.Conv1D( channels, kernel_size, 1, dilation_rate=dilation[0],
-                               padding='causal',
+                               padding='same',
                                kernel_initializer='random_normal',
                                 bias_initializer='zeros'
                                ),
            #tfp.layers.weight_norm.WeightNorm(
             tf.keras.layers.Conv1D( channels, kernel_size, 1, dilation_rate=dilation[1],
-                               padding='causal',
+                               padding='same',
                                kernel_initializer='random_normal',
                                 bias_initializer='zeros'),
            #tfp.layers.weight_norm.WeightNorm(
             tf.keras.layers.Conv1D( channels, kernel_size, 1, dilation_rate=dilation[2],
-                               padding='causal',
+                               padding='same',
                                kernel_initializer='random_normal',
                                 bias_initializer='zeros')
         ]
@@ -46,17 +46,17 @@ class AMPBlock(tf.keras.layers.Layer):
         self.convs2 = [
            #tfp.layers.weight_norm.WeightNorm(
             tf.keras.layers.Conv1D(channels, kernel_size, 1, dilation_rate=1,
-                               padding='causal',
+                               padding='same',
                                kernel_initializer='random_normal',
                                 bias_initializer='zeros'),
            #tfp.layers.weight_norm.WeightNorm(
             tf.keras.layers.Conv1D( channels, kernel_size, 1, dilation_rate=1,
-                               padding='causal',
+                               padding='same',
                                kernel_initializer='random_normal',
                                 bias_initializer='zeros'),
            #tfp.layers.weight_norm.WeightNorm(
             tf.keras.layers.Conv1D(channels, kernel_size, 1, dilation_rate=1,
-                               padding='causal',
+                               padding='same',
                                kernel_initializer='random_normal',
                                 bias_initializer='zeros')
         ]
