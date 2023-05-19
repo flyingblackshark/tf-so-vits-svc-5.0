@@ -13,10 +13,10 @@ class DiscriminatorS(tf.keras.layers.Layer):
         super(DiscriminatorS, self).__init__()
         self.convs = [
             tf.keras.layers.Conv1D(16, 15, 1, padding='same'),
-            tf.keras.layers.Conv1D(64, 41, 4, groups=4, padding='same'),
-            tf.keras.layers.Conv1D(256, 41, 4, groups=16, padding='same'),
-            tf.keras.layers.Conv1D(1024, 41, 4, groups=64, padding='same'),
-            tf.keras.layers.Conv1D(1024, 41, 4, groups=256, padding='same'),
+            tf.keras.layers.Conv1D(64, 41, 4,padding='same'),
+            tf.keras.layers.Conv1D(256, 41, 4,  padding='same'),
+            tf.keras.layers.Conv1D(1024, 41, 4, padding='same'),
+            tf.keras.layers.Conv1D(1024, 41, 4, padding='same'),
             tf.keras.layers.Conv1D(1024, 5, 1, padding='same')
         ]
         self.conv_post = tf.keras.layers.Conv1D(1, 3, 1, padding='same')

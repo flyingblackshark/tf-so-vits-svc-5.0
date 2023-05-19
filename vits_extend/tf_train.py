@@ -118,12 +118,7 @@ def train(rank, args, chkpt_path, hp, hp_str):
                     len_min = min(len_pit,len_ppg)  
                     pit = pit[:len_min]
                     ppg = ppg[:len_min, :]
-                
-                    # spec = tf.transpose(spec,[0,2,1])
-                    # spec = tf.squeeze(spec,0)
                     spec = spec[:,:len_min,: ]        
-                    # spec=tf.expand_dims(spec,0)
-                    # spec = tf.transpose(spec,[0,2,1])
                     ppg_l = ppg.shape[1]
                     spec_l =spec.shape[1]
             
@@ -135,7 +130,6 @@ def train(rank, args, chkpt_path, hp, hp_str):
                     mel_fake = stft.mel_spectrogram(tf.expand_dims(fake_audio,1))
                     mel_real = stft.mel_spectrogram(tf.expand_dims(audio,1))
                     mel_loss = l1_loss_fn(mel_fake, mel_real) * hp.train.c_mel
-                    # sc_loss, mag_loss = stft_criterion(temp1,temp2 )
                     def sc_mag_loss_fn( x, y):
                             sc_mag_loss = 0.0
                             for f in stft_losses:
@@ -150,9 +144,7 @@ def train(rank, args, chkpt_path, hp, hp_str):
                         
             
                     sc_mag_loss = sc_mag_loss_fn(tf.expand_dims(fake_audio,1),tf.expand_dims(audio,1) )
-                    #stft_loss = (sc_loss + mag_loss) * hp.train.c_stft
                     stft_loss = sc_mag_loss * hp.train.c_stft
-                with tf.device('/TPU:0'):
                     res_fake, period_fake, dis_fake = model_d(fake_audio,training=True)
                     score_loss = score_loss_fn(res_fake + period_fake + dis_fake,1.0)
                     res_real, period_real, dis_real = model_d(audio,training=True)
@@ -162,28 +154,22 @@ def train(rank, args, chkpt_path, hp, hp_str):
                     loss_g = score_loss + feat_loss + mel_loss + stft_loss + loss_kl_f
             
                     # Loss
-                    #optim_d.zero_grad()
-                    #fake_audio = tf.stop_gradient(fake_audio)
                     res_fake, period_fake, dis_fake = model_d(fake_audio,training=True)
                     res_real, period_real, dis_real = model_d(audio,training=True)
                     loss_d = d_loss_fn(res_fake + period_fake + dis_fake, res_real + period_real + dis_real)
+            g_gradients = tape.gradient(loss_g, model_g.trainable_variables)
+            g_gradients = strategy.reduce("SUM", g_gradients, axis=None)
+            d_gradients = tape.gradient(loss_d, model_d.trainable_variables)
+            d_gradients = strategy.reduce("SUM", d_gradients, axis=None)
+            d_optimizer.apply_gradients(zip(d_gradients, model_d.trainable_weights),skip_aggregate_gradients=True)
+            g_optimizer.apply_gradients(zip(g_gradients, model_g.trainable_weights),skip_aggregate_gradients=True)
+            loss_g = loss_g
+            loss_d = loss_d
+            loss_s = stft_loss
+            loss_m = mel_loss
+            loss_k = loss_kl_f
+            loss_r = loss_kl_r
+            
+            print("g %.04f m %.04f s %.04f d %.04f k %.04f r %.04f | step %d" % (
+                loss_g, loss_m, loss_s, loss_d, loss_k, loss_r,step))
                 
-                # g_gradients = tape.gradient(loss_g, model_g.trainable_variables,unconnected_gradients=tf.UnconnectedGradients.ZERO)
-                # d_gradients = tape.gradient(loss_d, model_d.trainable_variables,unconnected_gradients=tf.UnconnectedGradients.ZERO)
-            with strategy.scope():
-                g_gradients = tape.gradient(loss_g, model_g.trainable_variables)
-                d_gradients = tape.gradient(loss_d, model_d.trainable_variables)
-                d_optimizer.apply_gradients(zip(d_gradients, model_d.trainable_weights))
-                g_optimizer.apply_gradients(zip(g_gradients, model_g.trainable_weights))
-                    #loss_d.backward()
-                    #clip_grad_value_(model_d.parameters(),  None)
-                loss_g = loss_g
-                loss_d = loss_d
-                loss_s = stft_loss
-                loss_m = mel_loss
-                loss_k = loss_kl_f
-                loss_r = loss_kl_r
-                
-                print("g %.04f m %.04f s %.04f d %.04f k %.04f r %.04f | step %d" % (
-                    loss_g, loss_m, loss_s, loss_d, loss_k, loss_r,step))
-                    
