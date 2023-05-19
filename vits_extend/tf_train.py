@@ -53,7 +53,7 @@ class MultiResolutionSTFTLoss(tf.keras.layers.Layer):
         for fs, ss, wl in resolutions:
             self.stft_losses += [STFTLoss(fs, ss, wl, window)]
 
-    def forward(self, x, y):
+    def call(self, x, y):
         """Calculate forward propagation.
         Args:
             x (Tensor): Predicted signal (B, T).
@@ -138,7 +138,7 @@ def train(rank, args, chkpt_path, hp, hp_str):
                     mel_real = stft.mel_spectrogram(tf.expand_dims(audio,1))
 
                     mel_loss = tf.keras.losses.MAE(mel_fake, mel_real) * hp.train.c_mel
-                    sc_loss, mag_loss = stft_criterion(tf.squeeze(fake_audio,-1), tf.squeeze(audio.squeeze,-1))
+                    sc_loss, mag_loss = stft_criterion(tf.squeeze(fake_audio,-1), tf.squeeze(audio,-1))
                     stft_loss = (sc_loss+mag_loss) * hp.train.c_stft
                     disc_fake = model_d(fake_audio)
                     score_loss = 0.0
