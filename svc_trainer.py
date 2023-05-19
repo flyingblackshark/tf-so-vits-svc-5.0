@@ -27,6 +27,7 @@ if __name__ == '__main__':
 
     assert hp.data.hop_length == 320, \
         'hp.data.hop_length must be equal to 320, got %d' % hp.data.hop_length
+        
     train(0, args, args.checkpoint_path, hp, hp_str)
     # args.num_gpus = 0
     # torch.manual_seed(hp.train.seed)
