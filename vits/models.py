@@ -36,17 +36,15 @@ class TextEncoder(tf.keras.layers.Layer):
         self.proj = tf.keras.layers.Conv1D(out_channels * 2, 1)
 
     def call(self, x, x_lengths, f0, training=False):
-      #  x = tf.transpose(x, perm=[0,2,1])  # [b, h, t]
         x_mask = tf.expand_dims(tf.sequence_mask(x_lengths, x.shape[1],dtype=tf.bfloat16),1)
         x_mask = tf.expand_dims(x_mask,0)
-        #x_mask = tf.cast(x_mask,tf.float32)
         x = self.pre(x,training=training) * x_mask
         x = x + self.pit(f0,training=training)
         x = self.enc(x * x_mask, x_mask,training=training)
         stats = self.proj(x,training=training) * x_mask
         m, logs = tf.split(stats,2,axis=2)
         z = (m + tf.random.normal(m.shape,dtype=tf.bfloat16) * tf.exp(logs)) * x_mask
-        return z, m, logs, x_mask
+        return z, m, logs, x_mask,x
 
 
 class ResidualCouplingBlock(tf.keras.layers.Layer):
@@ -144,7 +142,6 @@ class SynthesizerTrn(tf.keras.Model):
         self.segment_size = segment_size
         self.emb_g = tf.keras.layers.Dense(hp.vits.gin_channels,input_shape=(hp.vits.spk_dim,),activation=None)
         self.enc_p = TextEncoder(
-            #hp.vits.ppg_dim,
             hp.vits.inter_channels,
             hp.vits.hidden_channels,
             hp.vits.filter_channels,
@@ -179,7 +176,7 @@ class SynthesizerTrn(tf.keras.Model):
     def call(self, ppg, pit, spec, spk, ppg_l, spec_l, training=False):
         ppg = ppg + tf.random.normal(ppg.shape)
         g = tf.expand_dims(self.emb_g(tf.keras.utils.normalize(spk),training=training),0)
-        z_p, m_p, logs_p, ppg_mask = self.enc_p(
+        z_p, m_p, logs_p, ppg_mask,x = self.enc_p(
             ppg, ppg_l, f0=f0_to_coarse(pit),training=training)
         z_q, m_q, logs_q, spec_mask = self.enc_q(spec, spec_l, g=g,training=training)
 
@@ -190,6 +187,8 @@ class SynthesizerTrn(tf.keras.Model):
         # SNAC to flow
         z_f, logdet_f = self.flow(z_q, spec_mask, g=spk,training=training)
         z_r, logdet_r = self.flow(z_p, spec_mask, g=spk, reverse=True,training=training)
+
+        spk_preds = self.speaker_classifier(x)
         return audio, ids_slice, spec_mask, (z_f, z_r, z_p, m_p, logs_p, z_q, m_q, logs_q, logdet_f, logdet_r)
 
     def infer(self, ppg, pit, spk, ppg_l):
