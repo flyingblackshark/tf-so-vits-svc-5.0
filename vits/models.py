@@ -174,7 +174,7 @@ class SynthesizerTrn(tf.keras.Model):
         self.dec = Generator(hp=hp)
 
     def call(self, ppg, pit, spec, spk, ppg_l, spec_l, training=False):
-        ppg = ppg + tf.random.normal(ppg.shape,dtype=tf.bfloat16)
+        #ppg = ppg + tf.random.normal(ppg.shape,dtype=tf.bfloat16) * 0.0001
         g = tf.expand_dims(self.emb_g(tf.keras.utils.normalize(spk),training=training),0)
         z_p, m_p, logs_p, ppg_mask,x = self.enc_p(
             ppg, ppg_l, f0=f0_to_coarse(pit),training=training)

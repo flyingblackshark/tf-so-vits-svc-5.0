@@ -16,15 +16,10 @@ class DiscriminatorP(tf.keras.layers.Layer):
        # tfa.layers.WeightNormalization = weight_norm if hp.mpd.use_spectral_norm == False else spectral_norm
 
         self.convs = [
-           # tfa.layers.SpectralNormalization(
             tf.keras.layers.Conv2D(64, (kernel_size, 1), (stride, 1), padding='same'),
-            #tfa.layers.SpectralNormalization(
             tf.keras.layers.Conv2D(128, (kernel_size, 1), (stride, 1), padding='same'),
-            #tfa.layers.SpectralNormalization(
             tf.keras.layers.Conv2D(256, (kernel_size, 1), (stride, 1), padding='same'),
-           # tfa.layers.SpectralNormalization(
             tf.keras.layers.Conv2D(512, (kernel_size, 1), (stride, 1), padding='same'),
-            #tfa.layers.SpectralNormalization(
             tf.keras.layers.Conv2D(1024, (kernel_size, 1), 1, padding='same')
         ]
         self.conv_post = tf.keras.layers.Conv2D(1,(3, 1), 1, padding='same')

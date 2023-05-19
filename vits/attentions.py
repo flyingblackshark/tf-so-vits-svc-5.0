@@ -30,7 +30,7 @@ class Encoder(tf.keras.layers.Layer):
         self.p_dropout = p_dropout
         self.window_size = window_size
 
-        self.drop = tf.keras.layers.Dropout(p_dropout)
+        self.drop = tf.keras.layers.Dropout(p_dropout,dtype=tf.float32)
         self.attn_layers = []#nn.ModuleList()
         self.norm_layers_1 = []#nn.ModuleList()
         self.ffn_layers = []#nn.ModuleList()
@@ -38,15 +38,14 @@ class Encoder(tf.keras.layers.Layer):
         for i in range(self.n_layers):
             self.attn_layers.append(
                 tf.keras.layers.MultiHeadAttention(
-                    # hidden_channels,
                     output_shape=hidden_channels,
                     key_dim=2,
                     num_heads=n_heads,
                     dropout=p_dropout,
-                   #window_size=window_size,
+                    dtype=tf.float32
                 )
             )
-            self.norm_layers_1.append(tf.keras.layers.LayerNormalization())
+            self.norm_layers_1.append(tf.keras.layers.LayerNormalization(dtype=tf.float32))
             self.ffn_layers.append(
             FFN(
                     hidden_channels,
@@ -55,9 +54,11 @@ class Encoder(tf.keras.layers.Layer):
                     p_dropout=p_dropout,
                 )
             )
-            self.norm_layers_2.append(tf.keras.layers.LayerNormalization())
+            self.norm_layers_2.append(tf.keras.layers.LayerNormalization(dtype=tf.float32))
 
     def call(self, x, x_mask,training=False):
+        x = tf.cast(x,tf.float32)
+        x_mask = tf.cast(x_mask,tf.float32)
         attn_mask = tf.expand_dims(x_mask,-1) * tf.expand_dims(x_mask,0)
         attn_mask = tf.expand_dims(attn_mask,1)
         attn_mask = tf.squeeze(attn_mask,-1)
@@ -65,15 +66,16 @@ class Encoder(tf.keras.layers.Layer):
         for i in range(self.n_layers):
             y = self.attn_layers[i](query=x, value=x,key=x,attention_mask=attn_mask,training=training)
             y = self.drop(y,training=training)
-            x = self.norm_layers_1[i](tf.cast(x + y,tf.float32),training=training)
-            x = x + y
+            x = self.norm_layers_1[i](x + y,training=training)
+            #x = x + y
             y = self.ffn_layers[i](x, x_mask,training=training)
           
             y = self.drop(y,training=training)
             x = self.norm_layers_2[i](x + y,training=training)  
-            x = x + y     
+            #x = x + y     
         x = x * x_mask
-        return x
+        
+        return tf.cast(x,tf.bfloat16)
 
 class FFN(tf.keras.layers.Layer):
     def __init__(
@@ -105,6 +107,7 @@ class FFN(tf.keras.layers.Layer):
         self.drop = tf.keras.layers.Dropout(p_dropout)
 
     def call(self, x, x_mask,training=False):
+        x_mask = tf.cast(x_mask,tf.bfloat16)
         x = x * x_mask
         x = self.conv_1(x,training=training)
        

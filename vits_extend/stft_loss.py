@@ -27,8 +27,8 @@ def stft(x, fft_size, hop_size, win_length):
     imag = tf.math.imag(x_stft)#x_stft[..., 1]
     real=tf.cast(real,tf.bfloat16)
     imag=tf.cast(imag,tf.bfloat16)
-    real=tf.squeeze(real,0)
-    imag=tf.squeeze(imag,0)
+    # real=tf.squeeze(real,0)
+    # imag=tf.squeeze(imag,0)
     # NOTE(kan-bayashi): clamp is needed to avoid nan or inf
     temp = tf.sqrt(tf.clip_by_value(real ** 2 + imag ** 2, clip_value_min=1e-7,clip_value_max=tf.bfloat16.max))
     temp = tf.cast(temp,tf.bfloat16)
