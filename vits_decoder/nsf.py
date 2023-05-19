@@ -217,7 +217,7 @@ class SineGen(tf.keras.layers.Layer):
     def _f02uv(self, f0):
         # generate uv signal
         uv = tf.ones_like(f0)
-        uv = uv * tf.cast((f0 > self.voiced_threshold),tf.bfloat16)
+        uv = uv * tf.cast((f0 > self.voiced_threshold),tf.float32)
         return uv
 
     def _f02sine(self, f0_values):
@@ -230,7 +230,7 @@ class SineGen(tf.keras.layers.Layer):
 
         # initial phase noise (no noise for fundamental component)
         rand_ini = tf.random.uniform(
-            [f0_values.shape[0], f0_values.shape[2]],dtype=tf.bfloat16
+            [f0_values.shape[0], f0_values.shape[2]],dtype=tf.float32
         ).numpy()
         rand_ini[:, 0] = 0
         rad_values[:, 0, :] = rad_values[:, 0, :] + rand_ini
@@ -245,7 +245,7 @@ class SineGen(tf.keras.layers.Layer):
             # This will not change F0 of sine because (x-1) * 2*pi = x * 2*pi
             tmp_over_one = tf.cumsum(rad_values, 1) % 1
             tmp_over_one_idx = (tmp_over_one[:, 1:, :] - tmp_over_one[:, :-1, :]) < 0
-            tmp_over_one_idx = tf.cast(tmp_over_one_idx, tf.bfloat16)
+            tmp_over_one_idx = tf.cast(tmp_over_one_idx, tf.float32)
             cumsum_shift = tf.zeros_like(rad_values).numpy()
             cumsum_shift[:, 1:, :] = tmp_over_one_idx * -1.0
 
@@ -293,7 +293,7 @@ class SineGen(tf.keras.layers.Layer):
         output uv: tensor(batchsize=1, length, 1)
         """
        # with tf.no_gradient("Size"):
-        f0_buf = tf.zeros([f0.shape[0], f0.shape[1], self.dim],dtype=tf.bfloat16).numpy()
+        f0_buf = tf.zeros([f0.shape[0], f0.shape[1], self.dim],dtype=tf.float32).numpy()
         # fundamental component
         f0_buf[:, :, 0] = f0[:, :, 0]
         for idx in np.arange(self.harmonic_num):
@@ -301,7 +301,7 @@ class SineGen(tf.keras.layers.Layer):
 
         # generate sine waveforms
         sine_waves = self._f02sine(f0_buf) * self.sine_amp
-        sine_waves = tf.cast(sine_waves,tf.bfloat16)
+        sine_waves = tf.cast(sine_waves,tf.float32)
         # generate uv signal
         # uv = torch.ones(f0.shape)
         # uv = uv * (f0 > self.voiced_threshold)
@@ -311,7 +311,7 @@ class SineGen(tf.keras.layers.Layer):
         #        std = self.sine_amp/3 -> max value ~ self.sine_amp
         # .       for voiced regions is self.noise_std
         noise_amp = uv * self.noise_std + (1 - uv) * self.sine_amp / 3
-        noise = noise_amp * tf.random.normal(sine_waves.shape,dtype=tf.bfloat16)
+        noise = noise_amp * tf.random.normal(sine_waves.shape,dtype=tf.float32)
 
         # first: set the unvoiced part to 0 by uv
         # then: additive noise

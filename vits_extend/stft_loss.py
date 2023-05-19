@@ -26,13 +26,13 @@ def stft(x, fft_size, hop_size, win_length):
     x_stft = tf.signal.stft(signals=x, frame_length=win_length, frame_step=hop_size,fft_length=fft_size,window_fn=tf.signal.hann_window)
     real = tf.math.real(x_stft)#x_stft[..., 0]
     imag = tf.math.imag(x_stft)#x_stft[..., 1]
-    real=tf.cast(real,tf.bfloat16)
-    imag=tf.cast(imag,tf.bfloat16)
+    real=tf.cast(real,tf.float32)
+    imag=tf.cast(imag,tf.float32)
     real=tf.squeeze(real,0)
     imag=tf.squeeze(imag,0)
     # NOTE(kan-bayashi): clamp is needed to avoid nan or inf
-    temp = tf.sqrt(tf.clip_by_value(real ** 2 + imag ** 2, clip_value_min=1e-7,clip_value_max=tf.bfloat16.max))
-    temp = tf.cast(temp,tf.bfloat16)
+    temp = tf.sqrt(tf.clip_by_value(real ** 2 + imag ** 2, clip_value_min=1e-7,clip_value_max=tf.float32.max))
+    temp = tf.cast(temp,tf.float32)
     return tf.transpose(temp,perm=[0,1,2])
     
 
