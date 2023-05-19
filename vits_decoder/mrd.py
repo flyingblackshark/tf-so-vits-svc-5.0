@@ -2,9 +2,9 @@
 # import torch.nn as nn
 # import torch.nn.functional as F
 # from torch.nn.utils import weight_norm, spectral_norm
-import functools
+#import functools
 import tensorflow as tf
-import tensorflow_addons as tfa
+#import tensorflow_addons as tfa
 class DiscriminatorR(tf.keras.layers.Layer):
     def __init__(self, hp, resolution):
         super(DiscriminatorR, self).__init__()
@@ -15,18 +15,18 @@ class DiscriminatorR(tf.keras.layers.Layer):
         #tfa.layers.WeightNormalization = weight_norm if hp.mrd.use_spectral_norm == False else spectral_norm
 
         self.convs = [
-            tfa.layers.SpectralNormalization(
-            tf.keras.layers.Conv2D(filters=32, kernel_size=(3, 9), padding='same')),
-            tfa.layers.SpectralNormalization(
-            tf.keras.layers.Conv2D(filters=32, kernel_size=(3, 9), strides=(1, 2), padding='same')),
-            tfa.layers.SpectralNormalization(
-            tf.keras.layers.Conv2D(filters=32, kernel_size=(3, 9), strides=(1, 2), padding='same')),
-            tfa.layers.SpectralNormalization(
-            tf.keras.layers.Conv2D(filters=32, kernel_size=(3, 9), strides=(1, 2), padding='same')),
-            tfa.layers.SpectralNormalization(
-            tf.keras.layers.Conv2D( filters=32, kernel_size=(3, 3), padding='same')),
+           # tfa.layers.SpectralNormalization(
+            tf.keras.layers.Conv2D(filters=32, kernel_size=(3, 9), padding='same'),
+           # tfa.layers.SpectralNormalization(
+            tf.keras.layers.Conv2D(filters=32, kernel_size=(3, 9), strides=(1, 2), padding='same'),
+           # tfa.layers.SpectralNormalization(
+            tf.keras.layers.Conv2D(filters=32, kernel_size=(3, 9), strides=(1, 2), padding='same'),
+           # tfa.layers.SpectralNormalization(
+            tf.keras.layers.Conv2D(filters=32, kernel_size=(3, 9), strides=(1, 2), padding='same'),
+           # tfa.layers.SpectralNormalization(
+            tf.keras.layers.Conv2D( filters=32, kernel_size=(3, 3), padding='same'),
         ]
-        self.conv_post = tfa.layers.SpectralNormalization(tf.keras.layers.Conv2D( 1, (3, 3), padding='same'))
+        self.conv_post = tf.keras.layers.Conv2D( 1, (3, 3), padding='same')
        
             
 

@@ -3,7 +3,7 @@
 # import torch.nn.functional as F
 # from torch.nn.utils import weight_norm, spectral_norm
 import tensorflow as tf
-import tensorflow_addons as tfa
+#import tensorflow_addons as tfa
 class DiscriminatorP(tf.keras.layers.Layer):
     def __init__(self, hp, period):
         super(DiscriminatorP, self).__init__()
@@ -16,18 +16,18 @@ class DiscriminatorP(tf.keras.layers.Layer):
        # tfa.layers.WeightNormalization = weight_norm if hp.mpd.use_spectral_norm == False else spectral_norm
 
         self.convs = [
-            tfa.layers.SpectralNormalization(
-            tf.keras.layers.Conv2D(64, (kernel_size, 1), (stride, 1), padding='same')),
-            tfa.layers.SpectralNormalization(
-            tf.keras.layers.Conv2D(128, (kernel_size, 1), (stride, 1), padding='same')),
-            tfa.layers.SpectralNormalization(
-            tf.keras.layers.Conv2D(256, (kernel_size, 1), (stride, 1), padding='same')),
-            tfa.layers.SpectralNormalization(
-            tf.keras.layers.Conv2D(512, (kernel_size, 1), (stride, 1), padding='same')),
-            tfa.layers.SpectralNormalization(
-            tf.keras.layers.Conv2D(1024, (kernel_size, 1), 1, padding='same')),
+           # tfa.layers.SpectralNormalization(
+            tf.keras.layers.Conv2D(64, (kernel_size, 1), (stride, 1), padding='same'),
+            #tfa.layers.SpectralNormalization(
+            tf.keras.layers.Conv2D(128, (kernel_size, 1), (stride, 1), padding='same'),
+            #tfa.layers.SpectralNormalization(
+            tf.keras.layers.Conv2D(256, (kernel_size, 1), (stride, 1), padding='same'),
+           # tfa.layers.SpectralNormalization(
+            tf.keras.layers.Conv2D(512, (kernel_size, 1), (stride, 1), padding='same'),
+            #tfa.layers.SpectralNormalization(
+            tf.keras.layers.Conv2D(1024, (kernel_size, 1), 1, padding='same')
         ]
-        self.conv_post = tfa.layers.SpectralNormalization(tf.keras.layers.Conv2D(1,(3, 1), 1, padding='same'))
+        self.conv_post = tf.keras.layers.Conv2D(1,(3, 1), 1, padding='same')
         
 
     def call(self, x,training=False):
