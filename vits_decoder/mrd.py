@@ -41,7 +41,7 @@ class DiscriminatorR(tf.keras.layers.Layer):
             fmap.append(x)
         x = self.conv_post(x,training=training)
         fmap.append(x)
-        x = tf.reshape(x,[x.shape[0],-1])
+        x = tf.reshape(x,[x.shape[0],x.shape[1]*x.shape[2]])
         return fmap, x
 
     def spectrogram(self, x):

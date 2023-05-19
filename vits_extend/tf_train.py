@@ -160,7 +160,7 @@ def train(rank, args, chkpt_path, hp, hp_str):
 
                     loss_g = score_loss + feat_loss + mel_loss + stft_loss + loss_kl_f + loss_kl_r * 0.5 
                 g_gradients = tape.gradient(loss_g, model_g.trainable_variables)
-                g_optimizer.apply_gradients(zip(g_gradients, model_g.trainable_weights),skip_aggregate_gradients=True)
+                g_optimizer.apply_gradients(zip(g_gradients, model_g.trainable_weights))#,skip_aggregate_gradients=True)
                 with tf.GradientTape(persistent= True) as tape:
                     disc_fake = model_d(tf.stop_gradient(fake_audio,training=True))
                     disc_real = model_d(audio,training=True)
@@ -171,7 +171,7 @@ def train(rank, args, chkpt_path, hp, hp_str):
                         loss_d += tf.reduce_mean(tf.pow(score_fake, 2))
                     loss_d = loss_d / len(disc_fake)
                 d_gradients = tape.gradient(loss_d, model_d.trainable_variables)
-                d_optimizer.apply_gradients(zip(d_gradients, model_d.trainable_weights),skip_aggregate_gradients=True)
+                d_optimizer.apply_gradients(zip(d_gradients, model_d.trainable_weights))#,skip_aggregate_gradients=True)
                 loss_g = loss_g
                 loss_d = loss_d
                 loss_s = stft_loss

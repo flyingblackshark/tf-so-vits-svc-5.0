@@ -45,7 +45,7 @@ class DiscriminatorP(tf.keras.layers.Layer):
         x = self.conv_post(x,training=training)
         fmap.append(x)
         #x = torch.flatten(x, 1, -1)
-        x = tf.reshape(x,[x.shape[0],-1])
+        x = tf.reshape(x,[x.shape[0],x.shape[1]*x.shape[2]])
         return fmap, x
 
 

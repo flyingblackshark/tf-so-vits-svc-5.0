@@ -39,7 +39,7 @@ class TextEncoder(tf.keras.layers.Layer):
         x_mask = tf.expand_dims(tf.sequence_mask(x_lengths, x.shape[1],dtype=tf.bfloat16),1)
         x_mask = tf.expand_dims(x_mask,0)
         x = self.pre(x,training=training) * x_mask
-        x = x + self.pit(f0,training=training)
+        x = x + tf.stop_gradient(self.pit(f0))
         x = self.enc(x * x_mask, x_mask,training=training)
         stats = self.proj(x,training=training) * x_mask
         m, logs = tf.split(stats,2,axis=2)
