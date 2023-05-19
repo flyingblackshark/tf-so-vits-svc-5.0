@@ -3,35 +3,35 @@
 import tensorflow as tf
 from librosa.filters import mel as librosa_mel_fn
 
-MAX_WAV_VALUE = 32768.0
+#MAX_WAV_VALUE = 32768.0
 
 
-def dynamic_range_compression_torch(x, C=1, clip_val=1e-5):
-    """
-    PARAMS
-    ------
-    C: compression factor
-    """
-    return tf.log(tf.clip_by_value(x, clip_value_min=clip_val) * C)
+# def dynamic_range_compression_torch(x, C=1, clip_val=1e-5):
+#     """
+#     PARAMS
+#     ------
+#     C: compression factor
+#     """
+#     return tf.log(tf.clip_by_value(x, clip_value_min=clip_val) * C)
 
 
-def dynamic_range_decompression_torch(x, C=1):
-    """
-    PARAMS
-    ------
-    C: compression factor used to compress
-    """
-    return tf.exp(x) / C
+# def dynamic_range_decompression_torch(x, C=1):
+#     """
+#     PARAMS
+#     ------
+#     C: compression factor used to compress
+#     """
+#     return tf.exp(x) / C
 
 
-def spectral_normalize_torch(magnitudes):
-    output = dynamic_range_compression_torch(magnitudes)
-    return output
+# def spectral_normalize_torch(magnitudes):
+#     output = dynamic_range_compression_torch(magnitudes)
+#     return output
 
 
-def spectral_de_normalize_torch(magnitudes):
-    output = dynamic_range_decompression_torch(magnitudes)
-    return output
+# def spectral_de_normalize_torch(magnitudes):
+#     output = dynamic_range_decompression_torch(magnitudes)
+#     return output
 
 
 mel_basis = {}
@@ -85,7 +85,7 @@ def spec_to_mel_torch(spec, n_fft, num_mels, sampling_rate, fmin, fmax):
             dtype=spec.dtype, device=spec.device
         )
     spec = tf.matmul(mel_basis[fmax_dtype_device], spec)
-    spec = spectral_normalize_torch(spec)
+    #spec = spectral_normalize_torch(spec)
     return spec
 
 
