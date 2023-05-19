@@ -72,6 +72,12 @@ def load_dataset():
 #        # mag_loss /= len(self.stft_losses)
 
 #         return sc_mag_loss
+def get_dataset():
+    dataset = load_dataset()
+    dataset = dataset.shuffle(2)
+    dataset = dataset.prefetch(buffer_size=tf.data.AUTOTUNE)
+    dataset = dataset.batch(1)
+    return dataset
 def train(rank, args, chkpt_path, hp, hp_str):
     #try TPU
     resolver = tf.distribute.cluster_resolver.TPUClusterResolver(tpu='')
@@ -83,110 +89,117 @@ def train(rank, args, chkpt_path, hp, hp_str):
     tf.keras.mixed_precision.set_global_policy(policy)
     strategy = tf.distribute.TPUStrategy(resolver)
     tf.random.set_seed(hp.train.seed)
-    dataset = load_dataset()
-    dataset = dataset.shuffle(2)
-    dataset = dataset.prefetch(buffer_size=tf.data.AUTOTUNE)
-    dataset = dataset.batch(1)
-    model_g = SynthesizerTrn(
-    hp.data.filter_length // 2 + 1,
-    hp.data.segment_size // hp.data.hop_length,
-    hp)
-        
-    model_d=Discriminator(hp)
-    d_optimizer=tf.keras.optimizers.AdamW(learning_rate=hp.train.learning_rate, beta_1=hp.train.betas[0],beta_2=hp.train.betas[1], epsilon=hp.train.eps)
-    g_optimizer=tf.keras.optimizers.AdamW(learning_rate=hp.train.learning_rate, beta_1=hp.train.betas[0],beta_2=hp.train.betas[1], epsilon=hp.train.eps)
-    #stft_criterion = MultiResolutionSTFTLoss()
     
-    stft = TacotronSTFT(filter_length=hp.data.filter_length,
-                        hop_length=hp.data.hop_length,
-                        win_length=hp.data.win_length,
-                        n_mel_channels=hp.data.mel_channels,
-                        sampling_rate=hp.data.sampling_rate,
-                        mel_fmin=hp.data.mel_fmin,
-                        mel_fmax=hp.data.mel_fmax,
-                        center=False)
+    train_dataset = strategy.distribute_datasets_from_function(
+    lambda _: get_dataset())
+    with strategy.scope():
+        model_g = SynthesizerTrn(
+        hp.data.filter_length // 2 + 1,
+        hp.data.segment_size // hp.data.hop_length,
+        hp)
+            
+        model_d=Discriminator(hp)
+        d_optimizer=tf.keras.optimizers.AdamW(learning_rate=hp.train.learning_rate, beta_1=hp.train.betas[0],beta_2=hp.train.betas[1], epsilon=hp.train.eps)
+        g_optimizer=tf.keras.optimizers.AdamW(learning_rate=hp.train.learning_rate, beta_1=hp.train.betas[0],beta_2=hp.train.betas[1], epsilon=hp.train.eps)
+        #stft_criterion = MultiResolutionSTFTLoss()
+        
+        stft = TacotronSTFT(filter_length=hp.data.filter_length,
+                            hop_length=hp.data.hop_length,
+                            win_length=hp.data.win_length,
+                            n_mel_channels=hp.data.mel_channels,
+                            sampling_rate=hp.data.sampling_rate,
+                            mel_fmin=hp.data.mel_fmin,
+                            mel_fmax=hp.data.mel_fmax,
+                            center=False)
 
 
     #vpr_loss = tf.keras.losses.CosineSimilarity()
-    epochs = 200
-    for epoch in range(epochs):
-        print("\nStart of epoch %d" % (epoch,))
+   
 
         # Iterate over the batches of the dataset.
-        for step, (spec,wav,ppg,pit,spk) in enumerate(dataset):
-           # with tf.device('/TPU:0'):
-            with strategy.scope():
-                
-                audio = tf.squeeze(wav,0)
-                len_pit = pit.shape[1]
-                len_ppg = ppg.shape[1]
-                len_min = min(len_pit,len_ppg)  
-                pit = pit[:len_min]
-                ppg = ppg[:len_min, :]
-                spec = spec[:,:len_min,: ]        
-                ppg_l = ppg.shape[1]
-                spec_l =spec.shape[1]
-                with tf.GradientTape(persistent= True) as tape:
-                    fake_audio, ids_slice, z_mask, \
-                        (z_f, z_r, z_p, m_p, logs_p, z_q, m_q, logs_q, logdet_f, logdet_r) = model_g(
-                            ppg, pit, spec, spk, ppg_l, spec_l,training=True)
-                    audio = commons.slice_segments(
-                        audio, ids_slice * hp.data.hop_length, hp.data.segment_size)  # slice
-                    #spk_loss = vpr_loss(spk, spk_preds, tf.cast(spk_preds.size(0),tf.bfloat16).fill_(1.0))
+      
+    @tf.function
+    def train_step(iterator):
+        def step_fn(inputs):
+            audio = tf.squeeze(wav,0)
+            len_pit = pit.shape[1]
+            len_ppg = ppg.shape[1]
+            len_min = min(len_pit,len_ppg)  
+            pit = pit[:len_min]
+            ppg = ppg[:len_min, :]
+            spec = spec[:,:len_min,: ]        
+            ppg_l = ppg.shape[1]
+            spec_l =spec.shape[1]
+            with tf.GradientTape(persistent= True) as tape:
+                fake_audio, ids_slice, z_mask, \
+                    (z_f, z_r, z_p, m_p, logs_p, z_q, m_q, logs_q, logdet_f, logdet_r) = model_g(
+                        ppg, pit, spec, spk, ppg_l, spec_l,training=True)
+                audio = commons.slice_segments(
+                    audio, ids_slice * hp.data.hop_length, hp.data.segment_size)  # slice
+                #spk_loss = vpr_loss(spk, spk_preds, tf.cast(spk_preds.size(0),tf.bfloat16).fill_(1.0))
 
-                    mel_fake = stft.mel_spectrogram(tf.expand_dims(fake_audio,1))
-                    mel_real = stft.mel_spectrogram(tf.expand_dims(audio,1))
+                mel_fake = stft.mel_spectrogram(tf.expand_dims(fake_audio,1))
+                mel_real = stft.mel_spectrogram(tf.expand_dims(audio,1))
 
-                    mel_loss = tf.keras.losses.MAE(mel_fake, mel_real) * hp.train.c_mel
-                    stft_losses = []
-                    for fs, ss, wl in eval(hp.mrd.resolutions):
-                        stft_losses += [STFTLoss(fs, ss, wl)]
-                    #sc_mag_loss = stft_criterion(fake_audio, audio)
-                    sc_mag_loss =0.0
-                    for f in stft_losses:
-                        sc_mag_loss += f(fake_audio, audio)
+                mel_loss = tf.keras.losses.MAE(mel_fake, mel_real) * hp.train.c_mel
+                stft_losses = []
+                for fs, ss, wl in eval(hp.mrd.resolutions):
+                    stft_losses += [STFTLoss(fs, ss, wl)]
+                #sc_mag_loss = stft_criterion(fake_audio, audio)
+                sc_mag_loss =0.0
+                for f in stft_losses:
+                    sc_mag_loss += f(fake_audio, audio)
 
-                    sc_mag_loss /= len(stft_losses)
-                    stft_loss = sc_mag_loss * hp.train.c_stft
-                    disc_fake = model_d(fake_audio)
-                    score_loss = 0.0
-                    for (_, score_fake) in disc_fake:
-                        score_loss += tf.reduce_mean(tf.pow(score_fake - 1.0, 2))
-                    score_loss = score_loss / len(disc_fake)
+                sc_mag_loss /= len(stft_losses)
+                stft_loss = sc_mag_loss * hp.train.c_stft
+                disc_fake = model_d(fake_audio)
+                score_loss = 0.0
+                for (_, score_fake) in disc_fake:
+                    score_loss += tf.reduce_mean(tf.pow(score_fake - 1.0, 2))
+                score_loss = score_loss / len(disc_fake)
 
 
-                    disc_real = model_d(audio)
-                    feat_loss = 0.0
-                    for (feat_fake, _), (feat_real, _) in zip(disc_fake, disc_real):
-                        for fake, real in zip(feat_fake, feat_real):
-                            feat_loss += tf.reduce_mean(tf.abs(fake - real))
-                    feat_loss = feat_loss / len(disc_fake)
-                    feat_loss = feat_loss * 2
-            
-                    # Loss
-                    loss_kl_f = kl_loss(z_f, logs_q, m_p, logs_p, logdet_f, z_mask) * hp.train.c_kl
-                    loss_kl_r = kl_loss(z_r, logs_p, m_q, logs_q, logdet_r, z_mask) * hp.train.c_kl
+                disc_real = model_d(audio)
+                feat_loss = 0.0
+                for (feat_fake, _), (feat_real, _) in zip(disc_fake, disc_real):
+                    for fake, real in zip(feat_fake, feat_real):
+                        feat_loss += tf.reduce_mean(tf.abs(fake - real))
+                feat_loss = feat_loss / len(disc_fake)
+                feat_loss = feat_loss * 2
+        
+                # Loss
+                loss_kl_f = kl_loss(z_f, logs_q, m_p, logs_p, logdet_f, z_mask) * hp.train.c_kl
+                loss_kl_r = kl_loss(z_r, logs_p, m_q, logs_q, logdet_r, z_mask) * hp.train.c_kl
 
-                    loss_g = score_loss + feat_loss + mel_loss + stft_loss + loss_kl_f + loss_kl_r * 0.5 
-                    disc_fake = model_d(tf.stop_gradient(fake_audio,training=True))
-                    disc_real = model_d(audio,training=True)
+                loss_g = score_loss + feat_loss + mel_loss + stft_loss + loss_kl_f + loss_kl_r * 0.5 
+                disc_fake = model_d(tf.stop_gradient(fake_audio),training=True)
+                disc_real = model_d(audio,training=True)
 
-                    loss_d = 0.0
-                    for (_, score_fake), (_, score_real) in zip(disc_fake, disc_real):
-                        loss_d += tf.reduce_mean(tf.pow(score_real - 1.0, 2))
-                        loss_d += tf.reduce_mean(tf.pow(score_fake, 2))
-                    loss_d = loss_d / len(disc_fake)
-                g_gradients = tape.gradient(loss_g, model_g.trainable_variables,unconnected_gradients=tf.UnconnectedGradients.ZERO)
-                g_optimizer.apply_gradients(grads_and_vars=list(zip(g_gradients, model_g.trainable_weights)))
-                d_gradients = tape.gradient(loss_d, model_d.trainable_variables,unconnected_gradients=tf.UnconnectedGradients.ZERO)
-                d_optimizer.apply_gradients(grads_and_vars=zip(d_gradients, model_d.trainable_weights))
-                loss_g = loss_g
-                loss_d = loss_d
-                loss_s = stft_loss
-                loss_m = mel_loss
-                loss_k = loss_kl_f
-                loss_r = loss_kl_r
-            
+                loss_d = 0.0
+                for (_, score_fake), (_, score_real) in zip(disc_fake, disc_real):
+                    loss_d += tf.reduce_mean(tf.pow(score_real - 1.0, 2))
+                    loss_d += tf.reduce_mean(tf.pow(score_fake, 2))
+                loss_d = loss_d / len(disc_fake)
+            g_gradients = tape.gradient(loss_g, model_g.trainable_variables,unconnected_gradients=tf.UnconnectedGradients.ZERO)
+            g_optimizer.apply_gradients(grads_and_vars=list(zip(g_gradients, model_g.trainable_weights)))
+            d_gradients = tape.gradient(loss_d, model_d.trainable_variables,unconnected_gradients=tf.UnconnectedGradients.ZERO)
+            d_optimizer.apply_gradients(grads_and_vars=zip(d_gradients, model_d.trainable_weights))
+            loss_g = loss_g
+            loss_d = loss_d
+            loss_s = stft_loss
+            loss_m = mel_loss
+            loss_k = loss_kl_f
+            loss_r = loss_kl_r
+        
             print("g %.04f m %.04f s %.04f d %.04f k %.04f r %.04f | step %d" % (
                 loss_g, loss_m, loss_s, loss_d, loss_k, loss_r,step))
-                
+        strategy.run(step_fn, args=(next(iterator),))
+    epochs = 200
+    steps_per_epoch  = 1 
+    train_iterator = iter(train_dataset)
+    for epoch in range(epochs):
+        print('Epoch: {}/5'.format(epoch))
+        for step in range(steps_per_epoch):
+            train_step(train_iterator)
+            
+                    
