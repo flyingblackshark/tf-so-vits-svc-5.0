@@ -74,6 +74,9 @@ def train(rank, args, chkpt_path, hp, hp_str):
     # policy = tf.keras.mixed_precision.Policy('mixed_bfloat16')
     # tf.keras.mixed_precision.set_global_policy(policy)
     # with tf.device('/TPU:0'):
+    cpu_device = tf.config.experimental.list_physical_devices(device_type='CPU')
+    tf.config.experimental.set_visible_devices(devices= cpu_device, device_type='CPU')
+    tf.debugging.set_log_device_placement(True)
     tf.random.set_seed(hp.train.seed)
     dataset = load_dataset()
     dataset = dataset.shuffle(2)
