@@ -32,9 +32,9 @@ class Encoder(tf.keras.layers.Layer):
 
         self.drop = tf.keras.layers.Dropout(p_dropout)
         self.attn_layers = []#nn.ModuleList()
-        self.norm_layers_1 = []#nn.ModuleList()
+        #self.norm_layers_1 = []#nn.ModuleList()
         self.ffn_layers = []#nn.ModuleList()
-        self.norm_layers_2 = []#nn.ModuleList()
+        #self.norm_layers_2 = []#nn.ModuleList()
         for i in range(self.n_layers):
             self.attn_layers.append(
                 tf.keras.layers.MultiHeadAttention(
@@ -46,7 +46,7 @@ class Encoder(tf.keras.layers.Layer):
                    #window_size=window_size,
                 )
             )
-            self.norm_layers_1.append(tf.keras.layers.LayerNormalization())
+            #self.norm_layers_1.append(tf.keras.layers.LayerNormalization())
             self.ffn_layers.append(
             FFN(
                     hidden_channels,
@@ -55,7 +55,7 @@ class Encoder(tf.keras.layers.Layer):
                     p_dropout=p_dropout,
                 )
             )
-            self.norm_layers_2.append(tf.keras.layers.LayerNormalization())
+           # self.norm_layers_2.append(tf.keras.layers.LayerNormalization())
 
     def call(self, x, x_mask,training=False):
         attn_mask = tf.expand_dims(x_mask,-1) * tf.expand_dims(x_mask,0)
@@ -66,12 +66,13 @@ class Encoder(tf.keras.layers.Layer):
         for i in range(self.n_layers):
             y = self.attn_layers[i](query=x, value=x,key=x,attention_mask=attn_mask,training=training)
             y = self.drop(y,training=training)
-            x = self.norm_layers_1[i](x + y,training=training)
-
+           # x = self.norm_layers_1[i](tf.cast(x + y,tf.float32),training=training)
+            x = x + y
             y = self.ffn_layers[i](x, x_mask,training=training)
           
             y = self.drop(y,training=training)
-            x = self.norm_layers_2[i](x + y,training=training)      
+           # x = self.norm_layers_2[i](x + y,training=training)  
+            x = x + y    
         #x=tf.transpose(x,[0,2,1])   
         x = x * x_mask
         return x

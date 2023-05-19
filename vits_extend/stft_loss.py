@@ -40,9 +40,9 @@ def stft(x, fft_size, hop_size, win_length):
 class SpectralConvergengeLoss(tf.keras.losses.Loss):
     """Spectral convergence loss module."""
 
-    def __init__(self):
-        """Initilize spectral convergence loss module."""
-        super(SpectralConvergengeLoss, self).__init__()
+    # def __init__(self):
+    #     """Initilize spectral convergence loss module."""
+    #     super(SpectralConvergengeLoss, self).__init__()
 
     def call(self, x_mag, y_mag):
         """Calculate forward propagation.
@@ -58,9 +58,9 @@ class SpectralConvergengeLoss(tf.keras.losses.Loss):
 class LogSTFTMagnitudeLoss(tf.keras.losses.Loss):
     """Log STFT magnitude loss module."""
 
-    def __init__(self):
-        """Initilize los STFT magnitude loss module."""
-        super(LogSTFTMagnitudeLoss, self).__init__()
+    # def __init__(self):
+    #     """Initilize los STFT magnitude loss module."""
+    #     super(LogSTFTMagnitudeLoss, self).__init__()
 
     def call(self, x_mag, y_mag):
         """Calculate forward propagation.
@@ -76,15 +76,15 @@ class LogSTFTMagnitudeLoss(tf.keras.losses.Loss):
 class STFTLoss(tf.keras.losses.Loss):
     """STFT loss module."""
 
-    def __init__(self, fft_size=1024, shift_size=120, win_length=600):#, window="hann_window"):
+    def __init__(self,reduction=tf.keras.losses.Reduction.SUM, fft_size=1024, shift_size=120, win_length=600):#, window="hann_window"):
         """Initialize STFT loss module."""
-        super(STFTLoss, self).__init__()
+        super(STFTLoss, self).__init__(reduction)
         self.fft_size = fft_size
         self.shift_size = shift_size
         self.win_length = win_length
         #self.window = getattr(tf.signal, window)(win_length)#.to(device)
-        self.spectral_convergenge_loss = SpectralConvergengeLoss()
-        self.log_stft_magnitude_loss = LogSTFTMagnitudeLoss()
+        self.spectral_convergenge_loss = SpectralConvergengeLoss(tf.keras.losses.Reduction.SUM)
+        self.log_stft_magnitude_loss = LogSTFTMagnitudeLoss(tf.keras.losses.Reduction.SUM)
 
     def call(self, x, y):
         """Calculate forward propagation.
