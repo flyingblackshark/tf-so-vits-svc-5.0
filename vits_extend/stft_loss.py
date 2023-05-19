@@ -76,9 +76,9 @@ class LogSTFTMagnitudeLoss(tf.keras.losses.Loss):
 class STFTLoss(tf.keras.losses.Loss):
     """STFT loss module."""
 
-    def __init__(self,reduction=tf.keras.losses.Reduction.SUM, fft_size=1024, shift_size=120, win_length=600):#, window="hann_window"):
+    def __init__(self,fft_size=1024, shift_size=120, win_length=600):
         """Initialize STFT loss module."""
-        super(STFTLoss, self).__init__(reduction)
+        super(STFTLoss, self).__init__(tf.keras.losses.Reduction.SUM)
         self.fft_size = fft_size
         self.shift_size = shift_size
         self.win_length = win_length

@@ -74,7 +74,6 @@ def train(rank, args, chkpt_path, hp, hp_str):
     policy = tf.keras.mixed_precision.Policy('mixed_bfloat16')
     tf.keras.mixed_precision.set_global_policy(policy)
     strategy = tf.distribute.TPUStrategy(resolver)
-    #with tf.device('/TPU:0'):
     tf.random.set_seed(hp.train.seed)
     dataset = load_dataset()
     dataset = dataset.shuffle(2)
@@ -98,20 +97,20 @@ def train(rank, args, chkpt_path, hp, hp_str):
                         mel_fmin=hp.data.mel_fmin,
                         mel_fmax=hp.data.mel_fmax,
                         center=False)
-    #self.num_epochs = 201
+
     l1_loss_fn = L1_Loss(tf.keras.losses.Reduction.SUM)
     d_loss_fn = D_Loss(tf.keras.losses.Reduction.SUM)
     feat_loss_fn =Feat_Loss(tf.keras.losses.Reduction.SUM)
     score_loss_fn = Score_Loss(tf.keras.losses.Reduction.SUM)
-    #model = GANModel(hp)
+
     epochs = 200
     for epoch in range(epochs):
         print("\nStart of epoch %d" % (epoch,))
 
         # Iterate over the batches of the dataset.
         for step, (spec,wav,ppg,pit,spk) in enumerate(dataset):
-            with strategy.scope():
-                with tf.GradientTape(persistent= True) as tape:
+            with tf.GradientTape(persistent= True) as tape:
+                with strategy.scope():
                     #audio = tf.transpose(wav,[0,1,3,2])
                     audio = tf.squeeze(wav,0)
                     len_pit = pit.shape[1]
@@ -153,6 +152,7 @@ def train(rank, args, chkpt_path, hp, hp_str):
                     sc_mag_loss = sc_mag_loss_fn(tf.expand_dims(fake_audio,1),tf.expand_dims(audio,1) )
                     #stft_loss = (sc_loss + mag_loss) * hp.train.c_stft
                     stft_loss = sc_mag_loss * hp.train.c_stft
+                with tf.device('/TPU:0'):
                     res_fake, period_fake, dis_fake = model_d(fake_audio,training=True)
                     score_loss = score_loss_fn(res_fake + period_fake + dis_fake,1.0)
                     res_real, period_real, dis_real = model_d(audio,training=True)
@@ -170,6 +170,7 @@ def train(rank, args, chkpt_path, hp, hp_str):
                 
                 # g_gradients = tape.gradient(loss_g, model_g.trainable_variables,unconnected_gradients=tf.UnconnectedGradients.ZERO)
                 # d_gradients = tape.gradient(loss_d, model_d.trainable_variables,unconnected_gradients=tf.UnconnectedGradients.ZERO)
+            with strategy.scope():
                 g_gradients = tape.gradient(loss_g, model_g.trainable_variables)
                 d_gradients = tape.gradient(loss_d, model_d.trainable_variables)
                 d_optimizer.apply_gradients(zip(d_gradients, model_d.trainable_weights))
@@ -185,4 +186,4 @@ def train(rank, args, chkpt_path, hp, hp_str):
                 
                 print("g %.04f m %.04f s %.04f d %.04f k %.04f r %.04f | step %d" % (
                     loss_g, loss_m, loss_s, loss_d, loss_k, loss_r,step))
-                
+                    
