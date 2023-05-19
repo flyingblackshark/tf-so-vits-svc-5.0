@@ -21,6 +21,7 @@ def read_tfrecord(example):
     pit = tf.cast(tf.io.parse_tensor(example["pit"],out_type=tf.float64),dtype=tf.bfloat16)
     spk = tf.cast(tf.io.parse_tensor(example["spk"],out_type=tf.float32),dtype=tf.bfloat16)
     return spe,wav,ppg,pit,spk
+
 def load_dataset():
     ignore_order = tf.data.Options()
     ignore_order.experimental_deterministic = False  # disable order, increase speed
@@ -37,40 +38,40 @@ def load_dataset():
     
     
    
-class MultiResolutionSTFTLoss(tf.keras.layers.Layer):
-    """Multi resolution STFT loss module."""
+# class MultiResolutionSTFTLoss(tf.Module):
+#     """Multi resolution STFT loss module."""
 
-    def __init__(self,
-                 resolutions,
-                 window="hann_window"):
-        """Initialize Multi resolution STFT loss module.
-        Args:
-            resolutions (list): List of (FFT size, hop size, window length).
-            window (str): Window function type.
-        """
-        super(MultiResolutionSTFTLoss, self).__init__()
-        self.stft_losses = []
-        for fs, ss, wl in resolutions:
-            self.stft_losses += [STFTLoss(fs, ss, wl, window)]
+#     def __init__(self,
+#                  resolutions,
+#                  window="hann_window"):
+#         """Initialize Multi resolution STFT loss module.
+#         Args:
+#             resolutions (list): List of (FFT size, hop size, window length).
+#             window (str): Window function type.
+#         """
+#         super(MultiResolutionSTFTLoss, self).__init__()
+#         self.stft_losses = []
+#         for fs, ss, wl in resolutions:
+#             self.stft_losses += [STFTLoss(fs, ss, wl, window)]
 
-    def call(self, x, y):
-        """Calculate forward propagation.
-        Args:
-            x (Tensor): Predicted signal (B, T).
-            y (Tensor): Groundtruth signal (B, T).
-        Returns:
-            Tensor: Multi resolution spectral convergence loss value.
-            Tensor: Multi resolution log STFT magnitude loss value.
-        """
-        sc_mag_loss = 0.0
-       # mag_loss = 0.0
-        for f in self.stft_losses:
-            sc_mag_loss += f(x, y)
+#     def call(self, x, y):
+#         """Calculate forward propagation.
+#         Args:
+#             x (Tensor): Predicted signal (B, T).
+#             y (Tensor): Groundtruth signal (B, T).
+#         Returns:
+#             Tensor: Multi resolution spectral convergence loss value.
+#             Tensor: Multi resolution log STFT magnitude loss value.
+#         """
+#         sc_mag_loss = 0.0
+#        # mag_loss = 0.0
+#         for f in self.stft_losses:
+#             sc_mag_loss += f(x, y)
 
-        sc_mag_loss /= len(self.stft_losses)
-       # mag_loss /= len(self.stft_losses)
+#         sc_mag_loss /= len(self.stft_losses)
+#        # mag_loss /= len(self.stft_losses)
 
-        return sc_mag_loss
+#         return sc_mag_loss
 def train(rank, args, chkpt_path, hp, hp_str):
     #try TPU
     resolver = tf.distribute.cluster_resolver.TPUClusterResolver(tpu='')
@@ -94,7 +95,7 @@ def train(rank, args, chkpt_path, hp, hp_str):
     model_d=Discriminator(hp)
     d_optimizer=tf.keras.optimizers.AdamW(learning_rate=hp.train.learning_rate, beta_1=hp.train.betas[0],beta_2=hp.train.betas[1], epsilon=hp.train.eps)
     g_optimizer=tf.keras.optimizers.AdamW(learning_rate=hp.train.learning_rate, beta_1=hp.train.betas[0],beta_2=hp.train.betas[1], epsilon=hp.train.eps)
-    stft_criterion = MultiResolutionSTFTLoss(eval(hp.mrd.resolutions))
+    #stft_criterion = MultiResolutionSTFTLoss()
     
     stft = TacotronSTFT(filter_length=hp.data.filter_length,
                         hop_length=hp.data.hop_length,
@@ -137,7 +138,15 @@ def train(rank, args, chkpt_path, hp, hp_str):
                     mel_real = stft.mel_spectrogram(tf.expand_dims(audio,1))
 
                     mel_loss = tf.keras.losses.MAE(mel_fake, mel_real) * hp.train.c_mel
-                    sc_mag_loss = stft_criterion(fake_audio, audio)
+                    stft_losses = []
+                    for fs, ss, wl in eval(hp.mrd.resolutions):
+                        stft_losses += [STFTLoss(fs, ss, wl)]
+                    #sc_mag_loss = stft_criterion(fake_audio, audio)
+                    sc_mag_loss =0.0
+                    for f in stft_losses:
+                        sc_mag_loss += f(fake_audio, audio)
+
+                    sc_mag_loss /= len(stft_losses)
                     stft_loss = sc_mag_loss * hp.train.c_stft
                     disc_fake = model_d(fake_audio)
                     score_loss = 0.0
@@ -159,9 +168,6 @@ def train(rank, args, chkpt_path, hp, hp_str):
                     loss_kl_r = kl_loss(z_r, logs_p, m_q, logs_q, logdet_r, z_mask) * hp.train.c_kl
 
                     loss_g = score_loss + feat_loss + mel_loss + stft_loss + loss_kl_f + loss_kl_r * 0.5 
-                g_gradients = tape.gradient(loss_g, model_g.trainable_variables)
-                g_optimizer.apply_gradients(zip(g_gradients, model_g.trainable_weights))#,skip_aggregate_gradients=True)
-                with tf.GradientTape(persistent= True) as tape:
                     disc_fake = model_d(tf.stop_gradient(fake_audio,training=True))
                     disc_real = model_d(audio,training=True)
 
@@ -170,8 +176,10 @@ def train(rank, args, chkpt_path, hp, hp_str):
                         loss_d += tf.reduce_mean(tf.pow(score_real - 1.0, 2))
                         loss_d += tf.reduce_mean(tf.pow(score_fake, 2))
                     loss_d = loss_d / len(disc_fake)
-                d_gradients = tape.gradient(loss_d, model_d.trainable_variables)
-                d_optimizer.apply_gradients(zip(d_gradients, model_d.trainable_weights))#,skip_aggregate_gradients=True)
+                g_gradients = tape.gradient(loss_g, model_g.trainable_variables,unconnected_gradients=tf.UnconnectedGradients.ZERO)
+                g_optimizer.apply_gradients(grads_and_vars=list(zip(g_gradients, model_g.trainable_weights)))
+                d_gradients = tape.gradient(loss_d, model_d.trainable_variables,unconnected_gradients=tf.UnconnectedGradients.ZERO)
+                d_optimizer.apply_gradients(grads_and_vars=zip(d_gradients, model_d.trainable_weights))
                 loss_g = loss_g
                 loss_d = loss_d
                 loss_s = stft_loss
