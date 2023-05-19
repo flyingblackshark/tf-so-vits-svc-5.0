@@ -174,7 +174,7 @@ class SynthesizerTrn(tf.keras.Model):
         self.dec = Generator(hp=hp)
 
     def call(self, ppg, pit, spec, spk, ppg_l, spec_l, training=False):
-        ppg = ppg + tf.random.normal(ppg.shape)
+        ppg = ppg + tf.random.normal(ppg.shape,dtype=tf.bfloat16)
         g = tf.expand_dims(self.emb_g(tf.keras.utils.normalize(spk),training=training),0)
         z_p, m_p, logs_p, ppg_mask,x = self.enc_p(
             ppg, ppg_l, f0=f0_to_coarse(pit),training=training)
@@ -188,7 +188,7 @@ class SynthesizerTrn(tf.keras.Model):
         z_f, logdet_f = self.flow(z_q, spec_mask, g=spk,training=training)
         z_r, logdet_r = self.flow(z_p, spec_mask, g=spk, reverse=True,training=training)
 
-        spk_preds = self.speaker_classifier(x)
+        #spk_preds = self.speaker_classifier(x)
         return audio, ids_slice, spec_mask, (z_f, z_r, z_p, m_p, logs_p, z_q, m_q, logs_q, logdet_f, logdet_r)
 
     def infer(self, ppg, pit, spk, ppg_l):
