@@ -5,6 +5,7 @@
 # from torch.nn import functional as F
 from vits import attentions
 from vits import commons
+from vits.modules_grl import SpeakerClassifier
 #from vits import modules
 from vits.utils import f0_to_coarse
 from vits_decoder.generator import Generator
@@ -43,7 +44,7 @@ class TextEncoder(tf.keras.layers.Layer):
         x = x + self.pit(f0,training=training)
         x = self.enc(x * x_mask, x_mask,training=training)
         stats = self.proj(x,training=training) * x_mask
-        m, logs = tf.split(stats,2,axis=2) #self.out_channels, axis=1)
+        m, logs = tf.split(stats,2,axis=2)
         z = (m + tf.random.normal(m.shape,dtype=tf.bfloat16) * tf.exp(logs)) * x_mask
         return z, m, logs, x_mask
 
@@ -116,7 +117,6 @@ class PosteriorEncoder(tf.keras.layers.Layer):
             gin_channels=gin_channels,
         )
         self.proj = tf.keras.layers.Conv1D(
-            #hidden_channels, 
             out_channels * 2, 1)
 
     def call(self, x, x_lengths, g=None,training=False):
@@ -153,6 +153,10 @@ class SynthesizerTrn(tf.keras.Model):
             3,
             0.1,
         )
+        self.speaker_classifier = SpeakerClassifier(
+            hp.vits.hidden_channels,
+            hp.vits.spk_dim,
+        )
         self.enc_q = PosteriorEncoder(
             #spec_channels,
             hp.vits.inter_channels,
@@ -173,6 +177,7 @@ class SynthesizerTrn(tf.keras.Model):
         self.dec = Generator(hp=hp)
 
     def call(self, ppg, pit, spec, spk, ppg_l, spec_l, training=False):
+        ppg = ppg + tf.random.normal(ppg.shape)
         g = tf.expand_dims(self.emb_g(tf.keras.utils.normalize(spk),training=training),0)
         z_p, m_p, logs_p, ppg_mask = self.enc_p(
             ppg, ppg_l, f0=f0_to_coarse(pit),training=training)

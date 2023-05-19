@@ -55,7 +55,7 @@ from librosa.filters import mel as librosa_mel_fn
 #   mel_filterbank = librosa.filters.mel(sr=sr, n_mels=n_mels, n_fft=n_fft, fmin=fmin, fmax=fmax)
 
 #   return mel_filterbank
-class TacotronSTFT(tf.keras.Model):
+class TacotronSTFT():
     def __init__(self, filter_length=512, hop_length=160, win_length=512,
                  n_mel_channels=80, sampling_rate=16000, mel_fmin=0.0,
                  mel_fmax=None, center=False):
