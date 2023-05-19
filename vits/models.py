@@ -5,7 +5,7 @@
 # from torch.nn import functional as F
 from vits import attentions
 from vits import commons
-from vits.modules_grl import SpeakerClassifier
+#from vits.modules_grl import SpeakerClassifier
 #from vits import modules
 from vits.utils import f0_to_coarse
 from vits_decoder.generator import Generator
@@ -150,10 +150,10 @@ class SynthesizerTrn(tf.keras.Model):
             3,
             0.1,
         )
-        self.speaker_classifier = SpeakerClassifier(
-            hp.vits.hidden_channels,
-            hp.vits.spk_dim,
-        )
+        # self.speaker_classifier = SpeakerClassifier(
+        #     hp.vits.hidden_channels,
+        #     hp.vits.spk_dim,
+        # )
         self.enc_q = PosteriorEncoder(
             #spec_channels,
             hp.vits.inter_channels,

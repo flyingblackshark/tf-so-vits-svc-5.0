@@ -32,9 +32,9 @@ class Encoder(tf.keras.layers.Layer):
 
         self.drop = tf.keras.layers.Dropout(p_dropout)
         self.attn_layers = []#nn.ModuleList()
-        #self.norm_layers_1 = []#nn.ModuleList()
+        self.norm_layers_1 = []#nn.ModuleList()
         self.ffn_layers = []#nn.ModuleList()
-        #self.norm_layers_2 = []#nn.ModuleList()
+        self.norm_layers_2 = []#nn.ModuleList()
         for i in range(self.n_layers):
             self.attn_layers.append(
                 tf.keras.layers.MultiHeadAttention(

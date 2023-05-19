@@ -129,11 +129,11 @@ def train(rank, args, chkpt_path, hp, hp_str):
                     spec_l =spec.shape[1]
             
                     fake_audio, ids_slice, z_mask, \
-                        (z_f, z_r, z_p, m_p, logs_p, z_q, m_q, logs_q, logdet_f, logdet_r),spk_preds = model_g(
+                        (z_f, z_r, z_p, m_p, logs_p, z_q, m_q, logs_q, logdet_f, logdet_r) = model_g(
                             ppg, pit, spec, spk, ppg_l, spec_l,training=True)
                     audio = commons.slice_segments(
                         audio, ids_slice * hp.data.hop_length, hp.data.segment_size)  # slice
-                    spk_loss = vpr_loss(spk, spk_preds, tf.cast(spk_preds.size(0),tf.bfloat16).fill_(1.0))
+                    #spk_loss = vpr_loss(spk, spk_preds, tf.cast(spk_preds.size(0),tf.bfloat16).fill_(1.0))
 
                     mel_fake = stft.mel_spectrogram(tf.expand_dims(fake_audio,1))
                     mel_real = stft.mel_spectrogram(tf.expand_dims(audio,1))
@@ -160,6 +160,10 @@ def train(rank, args, chkpt_path, hp, hp_str):
                     loss_kl_f = kl_loss(z_f, logs_q, m_p, logs_p, logdet_f, z_mask) * hp.train.c_kl
                     loss_kl_r = kl_loss(z_r, logs_p, m_q, logs_q, logdet_r, z_mask) * hp.train.c_kl
 
+                    loss_g = score_loss + feat_loss + mel_loss + stft_loss + loss_kl_f + loss_kl_r * 0.5 
+                d_gradients = tape.gradient(loss_d, model_d.trainable_variables)
+                d_optimizer.apply_gradients(zip(d_gradients, model_d.trainable_weights),skip_aggregate_gradients=True)
+                with tf.GradientTape(persistent= True) as tape:
                     disc_fake = model_d(fake_audio.detach())
                     disc_real = model_d(audio)
 
@@ -169,10 +173,6 @@ def train(rank, args, chkpt_path, hp, hp_str):
                         loss_d += tf.reduce_mean(tf.pow(score_fake, 2))
                     loss_d = loss_d / len(disc_fake)
                 g_gradients = tape.gradient(loss_g, model_g.trainable_variables)
-                #g_gradients = strategy.reduce("SUM", g_gradients, axis=None)
-                d_gradients = tape.gradient(loss_d, model_d.trainable_variables)
-                #d_gradients = strategy.reduce("SUM", d_gradients, axis=None)
-                d_optimizer.apply_gradients(zip(d_gradients, model_d.trainable_weights),skip_aggregate_gradients=True)
                 g_optimizer.apply_gradients(zip(g_gradients, model_g.trainable_weights),skip_aggregate_gradients=True)
                 loss_g = loss_g
                 loss_d = loss_d
