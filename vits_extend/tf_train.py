@@ -102,34 +102,25 @@ def train(rank, args, chkpt_path, hp, hp_str):
     d_loss_fn = D_Loss(tf.keras.losses.Reduction.SUM)
     feat_loss_fn =Feat_Loss(tf.keras.losses.Reduction.SUM)
     score_loss_fn = Score_Loss(tf.keras.losses.Reduction.SUM)
-    stft_losses = []#torch.nn.ModuleList()
-    def sc_mag_loss_fn( x, y):
-        sc_mag_loss = 0.0
-        for f in stft_losses:
-            sc_mag_l = f(x, y)
-            sc_mag_loss += sc_mag_l
 
-        sc_mag_l /= len(stft_losses)
-        return sc_mag_loss
-    for fs, ss, wl in eval(hp.mrd.resolutions):
-        stft_losses.append(STFTLoss(fs, ss, wl))
     epochs = 200
     for epoch in range(epochs):
         print("\nStart of epoch %d" % (epoch,))
 
         # Iterate over the batches of the dataset.
         for step, (spec,wav,ppg,pit,spk) in enumerate(dataset):
-            audio = tf.squeeze(wav,0)
-            len_pit = pit.shape[1]
-            len_ppg = ppg.shape[1]
-            len_min = min(len_pit,len_ppg)  
-            pit = pit[:len_min]
-            ppg = ppg[:len_min, :]
-            spec = spec[:,:len_min,: ]        
-            ppg_l = ppg.shape[1]
-            spec_l =spec.shape[1]
-            with strategy.scope():
-                with tf.GradientTape(persistent= True) as tape:     
+            with tf.device('/TPU:0'):
+                with tf.GradientTape(persistent= True) as tape:
+                    audio = tf.squeeze(wav,0)
+                    len_pit = pit.shape[1]
+                    len_ppg = ppg.shape[1]
+                    len_min = min(len_pit,len_ppg)  
+                    pit = pit[:len_min]
+                    ppg = ppg[:len_min, :]
+                    spec = spec[:,:len_min,: ]        
+                    ppg_l = ppg.shape[1]
+                    spec_l =spec.shape[1]
+            
                     fake_audio, ids_slice, z_mask, \
                         (z_f, z_r, z_p, m_p, logs_p, z_q, m_q, logs_q, logdet_f, logdet_r) = model_g(
                             ppg, pit, spec, spk, ppg_l, spec_l,training=True)
@@ -138,6 +129,19 @@ def train(rank, args, chkpt_path, hp, hp_str):
                     mel_fake = stft.mel_spectrogram(tf.expand_dims(fake_audio,1))
                     mel_real = stft.mel_spectrogram(tf.expand_dims(audio,1))
                     mel_loss = l1_loss_fn(mel_fake, mel_real) * hp.train.c_mel
+                    def sc_mag_loss_fn( x, y):
+                            sc_mag_loss = 0.0
+                            for f in stft_losses:
+                                sc_mag_l = f(x, y)
+                                sc_mag_loss += sc_mag_l
+
+                            sc_mag_l /= len(stft_losses)
+                            return sc_mag_loss
+                    stft_losses = []#torch.nn.ModuleList()
+                    for fs, ss, wl in eval(hp.mrd.resolutions):
+                        stft_losses.append(STFTLoss(fs, ss, wl))
+                        
+            
                     sc_mag_loss = sc_mag_loss_fn(tf.expand_dims(fake_audio,1),tf.expand_dims(audio,1) )
                     stft_loss = sc_mag_loss * hp.train.c_stft
                     res_fake, period_fake, dis_fake = model_d(fake_audio,training=True)
@@ -153,9 +157,9 @@ def train(rank, args, chkpt_path, hp, hp_str):
                     res_real, period_real, dis_real = model_d(audio,training=True)
                     loss_d = d_loss_fn(res_fake + period_fake + dis_fake, res_real + period_real + dis_real)
                 g_gradients = tape.gradient(loss_g, model_g.trainable_variables)
-                g_gradients = strategy.reduce("SUM", g_gradients, axis=None)
+                #g_gradients = strategy.reduce("SUM", g_gradients, axis=None)
                 d_gradients = tape.gradient(loss_d, model_d.trainable_variables)
-                d_gradients = strategy.reduce("SUM", d_gradients, axis=None)
+                #d_gradients = strategy.reduce("SUM", d_gradients, axis=None)
                 d_optimizer.apply_gradients(zip(d_gradients, model_d.trainable_weights),skip_aggregate_gradients=True)
                 g_optimizer.apply_gradients(zip(g_gradients, model_g.trainable_weights),skip_aggregate_gradients=True)
                 loss_g = loss_g
