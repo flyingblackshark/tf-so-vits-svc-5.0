@@ -15,11 +15,11 @@ def read_tfrecord(example):
         "spk": tf.io.FixedLenFeature([], tf.string, default_value=''),
     })
     example = tf.io.parse_single_example(example, feature)
-    spe = tf.cast(tf.io.parse_tensor(example["spe"],out_type=tf.float32),dtype=tf.bfloat16)
-    wav = tf.cast(tf.io.parse_tensor(example["wav"],out_type=tf.float32),dtype=tf.bfloat16)
-    ppg = tf.cast(tf.io.parse_tensor(example["ppg"],out_type=tf.float32),dtype=tf.bfloat16)
-    pit = tf.cast(tf.io.parse_tensor(example["pit"],out_type=tf.float64),dtype=tf.bfloat16)
-    spk = tf.cast(tf.io.parse_tensor(example["spk"],out_type=tf.float32),dtype=tf.bfloat16)
+    spe = tf.cast(tf.io.parse_tensor(example["spe"],out_type=tf.float32),dtype=tf.float32)
+    wav = tf.cast(tf.io.parse_tensor(example["wav"],out_type=tf.float32),dtype=tf.float32)
+    ppg = tf.cast(tf.io.parse_tensor(example["ppg"],out_type=tf.float32),dtype=tf.float32)
+    pit = tf.cast(tf.io.parse_tensor(example["pit"],out_type=tf.float64),dtype=tf.float32)
+    spk = tf.cast(tf.io.parse_tensor(example["spk"],out_type=tf.float32),dtype=tf.float32)
     return spe,wav,ppg,pit,spk
 
 def load_dataset():
@@ -28,6 +28,9 @@ def load_dataset():
     dataset = tf.data.TFRecordDataset(
         "test.tfrecords"
     )  # automatically interleaves reads from multiple files
+    test = dataset.as_numpy_iterator()
+    for i in test:
+        temp = read_tfrecord(i)
     dataset = dataset.with_options(
         ignore_order
     )  # uses data as soon as it streams in, rather than in its original order
@@ -36,42 +39,7 @@ def load_dataset():
     )
     return dataset
     
-    
-   
-# class MultiResolutionSTFTLoss(tf.Module):
-#     """Multi resolution STFT loss module."""
 
-#     def __init__(self,
-#                  resolutions,
-#                  window="hann_window"):
-#         """Initialize Multi resolution STFT loss module.
-#         Args:
-#             resolutions (list): List of (FFT size, hop size, window length).
-#             window (str): Window function type.
-#         """
-#         super(MultiResolutionSTFTLoss, self).__init__()
-#         self.stft_losses = []
-#         for fs, ss, wl in resolutions:
-#             self.stft_losses += [STFTLoss(fs, ss, wl, window)]
-
-#     def call(self, x, y):
-#         """Calculate forward propagation.
-#         Args:
-#             x (Tensor): Predicted signal (B, T).
-#             y (Tensor): Groundtruth signal (B, T).
-#         Returns:
-#             Tensor: Multi resolution spectral convergence loss value.
-#             Tensor: Multi resolution log STFT magnitude loss value.
-#         """
-#         sc_mag_loss = 0.0
-#        # mag_loss = 0.0
-#         for f in self.stft_losses:
-#             sc_mag_loss += f(x, y)
-
-#         sc_mag_loss /= len(self.stft_losses)
-#        # mag_loss /= len(self.stft_losses)
-
-#         return sc_mag_loss
 def get_dataset():
     dataset = load_dataset()
     dataset = dataset.shuffle(2)
@@ -98,7 +66,7 @@ class GANModel(tf.keras.Model):
         self.g_optimizer = g_optimizer
         self.loss_fn = loss_fn
     def train_step(self, data):
-            spe,wav,ppg,pit,spk = data
+            spec,wav,ppg,pit,spk = data
             audio = tf.squeeze(wav,0)
             len_pit = pit.shape[1]
             len_ppg = ppg.shape[1]
@@ -114,7 +82,7 @@ class GANModel(tf.keras.Model):
                         ppg, pit, spec, spk, ppg_l, spec_l,training=True)
                 audio = commons.slice_segments(
                     audio, ids_slice * self.hp.data.hop_length, self.hp.data.segment_size)  # slice
-                #spk_loss = vpr_loss(spk, spk_preds, tf.cast(spk_preds.size(0),tf.bfloat16).fill_(1.0))
+                #spk_loss = vpr_loss(spk, spk_preds, tf.cast(spk_preds.size(0),tf.float32).fill_(1.0))
 
                 mel_fake = self.stft.mel_spectrogram(tf.expand_dims(fake_audio,1))
                 mel_real = self.stft.mel_spectrogram(tf.expand_dims(audio,1))
@@ -184,8 +152,8 @@ def train(rank, args, chkpt_path, hp, hp_str):
     # This is the TPU initialization code that has to be at the beginning.
     tf.tpu.experimental.initialize_tpu_system(resolver)
     print("All devices: ", tf.config.list_logical_devices('TPU'))
-    policy = tf.keras.mixed_precision.Policy('mixed_bfloat16')
-    tf.keras.mixed_precision.set_global_policy(policy)
+    # policy = tf.keras.mixed_precision.Policy('mixed_bfloat16')
+    # tf.keras.mixed_precision.set_global_policy(policy)
     strategy = tf.distribute.TPUStrategy(resolver)
     tf.random.set_seed(hp.train.seed)
     

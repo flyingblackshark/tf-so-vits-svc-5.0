@@ -36,14 +36,14 @@ class TextEncoder(tf.keras.layers.Layer):
         self.proj = tf.keras.layers.Conv1D(out_channels * 2, 1)
 
     def call(self, x, x_lengths, f0, training=False):
-        x_mask = tf.expand_dims(tf.sequence_mask(x_lengths, x.shape[1],dtype=tf.bfloat16),1)
+        x_mask = tf.expand_dims(tf.sequence_mask(x_lengths, x.shape[1],dtype=tf.float32),1)
         x_mask = tf.expand_dims(x_mask,0)
         x = self.pre(x,training=training) * x_mask
         x = x + self.pit(f0,training=training)
         x = self.enc(x * x_mask, x_mask,training=training)
         stats = self.proj(x,training=training) * x_mask
         m, logs = tf.split(stats,2,axis=2)
-        z = (m + tf.random.normal(m.shape,dtype=tf.bfloat16) * tf.exp(logs)) * x_mask
+        z = (m + tf.random.normal(m.shape,dtype=tf.float32) * tf.exp(logs)) * x_mask
         return z, m, logs, x_mask,x
 
 
@@ -79,13 +79,13 @@ class ResidualCouplingBlock(tf.keras.layers.Layer):
             total_logdet = 0
             for flow in self.flows:
                 x, log_det = flow(x, x_mask, g=g, reverse=reverse,training=training)
-                total_logdet += tf.cast(log_det,tf.bfloat16)
+                total_logdet += tf.cast(log_det,tf.float32)
             return x, total_logdet
         else:
             total_logdet = 0
             for flow in reversed(self.flows):
                 x, log_det = flow(x, x_mask, g=g, reverse=reverse,training=training)
-                total_logdet += tf.cast(log_det,tf.bfloat16)
+                total_logdet += tf.cast(log_det,tf.float32)
             return x, total_logdet
 
     # def remove_weight_norm(self):
@@ -118,13 +118,13 @@ class PosteriorEncoder(tf.keras.layers.Layer):
             out_channels * 2, 1)
 
     def call(self, x, x_lengths, g=None,training=False):
-        x_mask = tf.expand_dims(tf.sequence_mask(x_lengths, x.shape[1],dtype=tf.bfloat16), 1)
+        x_mask = tf.expand_dims(tf.sequence_mask(x_lengths, x.shape[1],dtype=tf.float32), 1)
         x_mask =tf.expand_dims(x_mask,0)
         x = self.pre(x,training=training) * x_mask
         x = self.enc(x, x_mask, g=g,training=training)
         stats = self.proj(x,training=training) * x_mask
         m, logs = tf.split(stats,[self.out_channels,self.out_channels],axis=2)
-        z = (m + tf.random.normal(m.shape,dtype=tf.bfloat16) * tf.exp(logs)) * x_mask
+        z = (m + tf.random.normal(m.shape,dtype=tf.float32) * tf.exp(logs)) * x_mask
         return z, m, logs, x_mask
 
     # def remove_weight_norm(self):
@@ -174,7 +174,7 @@ class SynthesizerTrn(tf.keras.Model):
         self.dec = Generator(hp=hp)
 
     def call(self, ppg, pit, spec, spk, ppg_l, spec_l, training=False):
-        #ppg = ppg + tf.random.normal(ppg.shape,dtype=tf.bfloat16) * 0.0001
+        #ppg = ppg + tf.random.normal(ppg.shape,dtype=tf.float32) * 0.0001
         g = tf.expand_dims(self.emb_g(tf.keras.utils.normalize(spk),training=training),0)
         z_p, m_p, logs_p, ppg_mask,x = self.enc_p(
             ppg, ppg_l, f0=f0_to_coarse(pit),training=training)

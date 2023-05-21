@@ -75,7 +75,7 @@ class Encoder(tf.keras.layers.Layer):
             #x = x + y     
         x = x * x_mask
         
-        return tf.cast(x,tf.bfloat16)
+        return tf.cast(x,tf.float32)
 
 class FFN(tf.keras.layers.Layer):
     def __init__(
@@ -107,7 +107,7 @@ class FFN(tf.keras.layers.Layer):
         self.drop = tf.keras.layers.Dropout(p_dropout)
 
     def call(self, x, x_mask,training=False):
-        x_mask = tf.cast(x_mask,tf.bfloat16)
+        x_mask = tf.cast(x_mask,tf.float32)
         x = x * x_mask
         x = self.conv_1(x,training=training)
        

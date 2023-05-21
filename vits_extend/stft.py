@@ -71,7 +71,7 @@ class TacotronSTFT():
         mel = librosa_mel_fn(
             sr=sampling_rate, n_fft=filter_length, n_mels=n_mel_channels, fmin=mel_fmin, fmax=mel_fmax)
 
-        self.mel_basis = tf.cast(tf.transpose(tf.convert_to_tensor(mel), perm=[1,0]),dtype=tf.bfloat16)
+        self.mel_basis = tf.cast(tf.transpose(tf.convert_to_tensor(mel), perm=[1,0]),dtype=tf.float32)
         # mel = librosa_mel_fn(
         #     sr=sampling_rate, n_fft=filter_length, n_mels=n_mel_channels, fmin=mel_fmin, fmax=mel_fmax)
             # Register mel_basis buffer
@@ -134,13 +134,13 @@ class TacotronSTFT():
         pad_end=False
         )
         def complex_to_float(complex_num):
-            real = tf.cast(tf.math.real(complex_num),dtype=tf.bfloat16)
-            imag = tf.cast(tf.math.imag(complex_num),dtype=tf.bfloat16)
+            real = tf.cast(tf.math.real(complex_num),dtype=tf.float32)
+            imag = tf.cast(tf.math.imag(complex_num),dtype=tf.float32)
             return tf.sqrt(real**2+imag**2)+ 1e-9
-        spec = tf.map_fn(complex_to_float,spec,dtype=tf.bfloat16)
+        spec = tf.map_fn(complex_to_float,spec,dtype=tf.float32)
         spec = tf.matmul(spec,self.mel_basis )
         spec = self.spectral_normalize_torch(spec)
-        spec = tf.cast(spec,dtype=tf.bfloat16)
+        spec = tf.cast(spec,dtype=tf.float32)
         return spec
 
     def spectral_normalize_torch(self, magnitudes):
@@ -148,4 +148,4 @@ class TacotronSTFT():
         return output
 
     def dynamic_range_compression_torch(self, x, C=1, clip_val=1e-5):
-        return tf.math.log(tf.clip_by_value(x, clip_value_min=clip_val,clip_value_max=tf.bfloat16.max) * C)
+        return tf.math.log(tf.clip_by_value(x, clip_value_min=clip_val,clip_value_max=tf.float32.max) * C)
