@@ -28,23 +28,23 @@ def load_dataset():
     dataset = tf.data.TFRecordDataset(
         "test.tfrecords"
     )  # automatically interleaves reads from multiple files
-    test = dataset.as_numpy_iterator()
-    for i in test:
-        temp = read_tfrecord(i)
-    dataset = dataset.with_options(
-        ignore_order
-    )  # uses data as soon as it streams in, rather than in its original order
-    dataset = dataset.map(
-        read_tfrecord, num_parallel_calls=tf.data.AUTOTUNE
-    )
+    # test = dataset.as_numpy_iterator()
+    # for i in test:
+    #     temp = read_tfrecord(i)
+    # dataset = dataset.with_options(
+    #     ignore_order
+    # )  # uses data as soon as it streams in, rather than in its original order
+    # dataset = dataset.map(
+    #     read_tfrecord, num_parallel_calls=tf.data.AUTOTUNE
+    # )
     return dataset
     
 
 def get_dataset():
     dataset = load_dataset()
-    dataset = dataset.shuffle(2)
-    dataset = dataset.prefetch(buffer_size=tf.data.AUTOTUNE)
-    dataset = dataset.batch(1)
+    # dataset = dataset.shuffle(2)
+    # dataset = dataset.prefetch(buffer_size=tf.data.AUTOTUNE)
+    # dataset = dataset.batch(1)
     return dataset
 class GANModel(tf.keras.Model):
     def __init__(self, discriminator, generator, stft,hp):
@@ -68,12 +68,12 @@ class GANModel(tf.keras.Model):
     def train_step(self, data):
             spec,wav,ppg,pit,spk = data
             audio = tf.squeeze(wav,0)
-            len_pit = pit.shape[1]
-            len_ppg = ppg.shape[1]
-            len_min = min(len_pit,len_ppg)  
-            pit = pit[:len_min]
-            ppg = ppg[:len_min, :]
-            spec = spec[:,:len_min,: ]        
+            # len_pit = pit.shape[1]
+            # len_ppg = ppg.shape[1]
+            # len_min = min(len_pit,len_ppg)  
+            # pit = pit[:len_min]
+            # ppg = ppg[:len_min, :]
+            # spec = spec[:,:len_min,: ]        
             ppg_l = ppg.shape[1]
             spec_l =spec.shape[1]
             with tf.GradientTape(persistent= True) as tape:
@@ -182,6 +182,33 @@ def train(rank, args, chkpt_path, hp, hp_str):
             g_optimizer=g_optimizer,
             loss_fn=tf.keras.losses.BinaryCrossentropy(from_logits=True),
         )
-
-    cond_gan.fit(get_dataset(), epochs=20)
+    dataset = get_dataset()
+    test = dataset.as_numpy_iterator()
+    # "spe": tf.io.FixedLenFeature([], tf.string, default_value=''),
+    #     "wav": tf.io.FixedLenFeature([], tf.string, default_value=''),
+    #     "ppg": tf.io.FixedLenFeature([], tf.string, default_value=''),
+    #     "pit": tf.io.FixedLenFeature([], tf.string, default_value=''),
+    #     "spk":
+    spe_list = []
+    wav_list = []
+    ppg_list = []
+    pit_list = []
+    spk_list = []
+    for i in test:
+        temp = read_tfrecord(i)
+      #  test = tf.zeros_like([400,513]).numpy()
+        # for i in range(400):
+        #     test[i]=temp[0][i]
+        spec = temp[0][:400,:]
+        spe_list.append(spec)
+        wav_list.append(temp[1])
+        ppg_list.append(temp[2])
+        pit_list.append(temp[3])
+        spk_list.append(temp[4])
+    spe_list=tf.convert_to_tensor(spe_list)
+    wav_list.tf.convert_to_tensor(wav_list)
+    ppg_list.tf.convert_to_tensor(ppg_list)
+    pit_list.tf.convert_to_tensor(pit_list)
+    spk_list.tf.convert_to_tensor(spk_list)
+    cond_gan.fit([spe_list,wav_list,ppg_list,pit_list,spk_list],batch_size=1, epochs=20)
                     
