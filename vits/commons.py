@@ -24,7 +24,6 @@ def slice_segments(x, ids_str, segment_size=4):
     for i in range(x.shape[0]):
         idx_str = ids_str[i]
         idx_end = idx_str + segment_size
-        #ret = tf.py_function(mo, inp=[ret, [i], x[i, :, idx_str:idx_end]], Tout=ret.dtype)
         ret[i] = x[i, idx_str:idx_end, :]
     return ret
 def slice_pitch_segments(x, ids_str, segment_size=4):
@@ -32,8 +31,6 @@ def slice_pitch_segments(x, ids_str, segment_size=4):
     for i in range(x.shape[0]):
         idx_str = ids_str[i]
         idx_end = idx_str + segment_size
-        #ret = tf.py_function(mo, inp=[ret, [i], x[i, idx_str:idx_end]], Tout=ret.dtype)
-        
         ret[i] = x[i, idx_str:idx_end]
     return ret
 def rand_slice_segments_with_pitch(x, pitch, x_lengths=None, segment_size=4):

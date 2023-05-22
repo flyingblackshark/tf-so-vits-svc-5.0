@@ -66,8 +66,13 @@ class GANModel(tf.keras.Model):
         self.g_optimizer = g_optimizer
         self.loss_fn = loss_fn
     def train_step(self, data):
-            spec,wav,ppg,pit,spk = data
-            audio = tf.squeeze(wav,0)
+            #spec,audio,ppg,pit,spk = data
+            spec = data[0][0]
+            audio = data[0][1]
+            ppg = data[0][2]
+            pit = data[0][3]
+            spk = data[0][4]
+            #audio = tf.squeeze(wav,0)
             # len_pit = pit.shape[1]
             # len_ppg = ppg.shape[1]
             # len_min = min(len_pit,len_ppg)  
@@ -201,14 +206,26 @@ def train(rank, args, chkpt_path, hp, hp_str):
         #     test[i]=temp[0][i]
         spec = temp[0][:400,:]
         spe_list.append(spec)
-        wav_list.append(temp[1])
+        wav_list.append(tf.squeeze(temp[1],0))
         ppg_list.append(temp[2])
         pit_list.append(temp[3])
         spk_list.append(temp[4])
+    spe_list = tf.keras.preprocessing.sequence.pad_sequences(
+    spe_list, padding="post",dtype="float32"
+    )
     spe_list=tf.convert_to_tensor(spe_list)
-    wav_list.tf.convert_to_tensor(wav_list)
-    ppg_list.tf.convert_to_tensor(ppg_list)
-    pit_list.tf.convert_to_tensor(pit_list)
-    spk_list.tf.convert_to_tensor(spk_list)
+    wav_list = tf.keras.preprocessing.sequence.pad_sequences(
+    wav_list, padding="post",dtype="float32"
+    )
+    wav_list=tf.convert_to_tensor(wav_list)
+    ppg_list = tf.keras.preprocessing.sequence.pad_sequences(
+    ppg_list, padding="post",dtype="float32"
+    )
+    ppg_list=tf.convert_to_tensor(ppg_list)
+    pit_list = tf.keras.preprocessing.sequence.pad_sequences(
+    pit_list, padding="post",dtype="float32"
+    )
+    pit_list=tf.convert_to_tensor(pit_list)
+    spk_list=tf.convert_to_tensor(spk_list)
     cond_gan.fit([spe_list,wav_list,ppg_list,pit_list,spk_list],batch_size=1, epochs=20)
                     
