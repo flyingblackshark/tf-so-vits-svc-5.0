@@ -21,22 +21,17 @@ import numpy as np
 #     input_tensor[tuple(position)] = value
 #     return input_tensor
 def slice_segments(x, ids_str, segment_size=4):
-    #ret = tf.zeros_like(x[:, :segment_size, :]).numpy()
-    ret = np.zeros((tf.shape(x)[0],segment_size,tf.shape[2]))
+    ret = tf.TensorArray(tf.float32, size=0, dynamic_size=True, clear_after_read=False)
     for i in range(tf.shape(x)[0]):
         idx_str = ids_str[i]
-        idx_end = idx_str + segment_size
-        ret[i] = x[i, idx_str:idx_end, :]
-    return tf.convert_to_tensor(ret)
+        ret.write(i,tf.slice(x,[i,idx_str,0],[1,segment_size,x.shape[2]]))
+    return ret.stack()
 def slice_pitch_segments(x, ids_str, segment_size=4):
-    #ret = tf.zeros_like(x[:, :segment_size]).numpy()
-    ret = np.zeros((tf.shape(x)[0],segment_size))
-    for i in range(x.shape[0]):
+    ret = tf.TensorArray(tf.float32, size=0, dynamic_size=True, clear_after_read=False)
+    for i in range(tf.shape(x)[0]):
         idx_str = ids_str[i]
-        idx_end = idx_str + segment_size
-        ret[i] = x[i, idx_str:idx_end]
-        #ret.append(x[i, idx_str:idx_end])
-    return tf.convert_to_tensor(ret)
+        ret.write(i,tf.slice(x,[i,idx_str],[1,segment_size]))
+    return ret.stack()
 def rand_slice_segments_with_pitch(x, pitch, x_lengths=None, segment_size=4):
     b, d, t = tf.shape(x)[0],tf.shape(x)[1],tf.shape(x)[2]
 
