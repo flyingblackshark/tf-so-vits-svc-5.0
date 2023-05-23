@@ -234,6 +234,9 @@ class SineGen(tf.keras.layers.Layer):
             [tf.shape(f0_values)[0], f0_values.shape[2]],dtype=tf.float32
         )
         rand_ini[:, 0] = 0
+        # update_indices = [(i,0) for i in range(tf.shape(f0_values)[0])]
+        # update_value = [(0) for i in range(tf.shape(f0_values)[0])]
+        # rand_ini = tf.tensor_scatter_nd_update(rand_ini, update_indices, update_value)
         rad_values[:, 0, :] = rad_values[:, 0, :] + rand_ini
 
         # instantanouse phase sine[t] = sin(2*pi \sum_i=1 ^{t} rad)
@@ -293,13 +296,15 @@ class SineGen(tf.keras.layers.Layer):
         output sine_tensor: tensor(batchsize=1, length, dim)
         output uv: tensor(batchsize=1, length, 1)
         """
-       # with tf.no_gradient("Size"):
-        f0_buf = np.zeros([tf.shape(f0)[0], f0.shape[1], self.dim])
-        # fundamental component
-        f0_buf[:, :, 0] = f0[:, :, 0]
+        f0_buf = tf.TensorArray(tf.float32, size=0, dynamic_size=True, clear_after_read=False)
+        # with tf.no_gradient("Size"):
+        # f0_buf = np.zeros([tf.shape(f0).numpy()[0], tf.shape(f0).numpy()[1], self.dim]).numpy()
+        # # fundamental component
+        # f0_buf[:, :, 0] = f0[:, :, 0]
         for idx in np.arange(self.harmonic_num):
-             f0_buf[:, :, idx + 1]=f0_buf[:, :, 0] * (idx + 2)
-
+            f0_buf.write(idx, f0[:, :, 0] * (idx + 2))
+        #     f0_buf[:, :, idx + 1]=f0_buf[:, :, 0] * (idx + 2)
+        f0_buf = f0_buf.concat()
         # generate sine waveforms
         sine_waves = self._f02sine(f0_buf) * self.sine_amp
         sine_waves = tf.cast(sine_waves,tf.float32)

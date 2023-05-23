@@ -186,7 +186,7 @@ def train(rank, args, chkpt_path, hp, hp_str):
         cond_gan.compile(
             d_optimizer=d_optimizer,
             g_optimizer=g_optimizer,
-            loss_fn=tf.keras.losses.BinaryCrossentropy(from_logits=True),
+            loss_fn=tf.keras.losses.BinaryCrossentropy(from_logits=True)
         )
     dataset = get_dataset()
     test = dataset.as_numpy_iterator()
@@ -228,5 +228,6 @@ def train(rank, args, chkpt_path, hp, hp_str):
     )
     pit_list=tf.convert_to_tensor(pit_list)
     spk_list=tf.convert_to_tensor(spk_list)
+    #tf.config.run_functions_eagerly(True)
     cond_gan.fit([spe_list,wav_list,ppg_list,pit_list,spk_list],batch_size=8, epochs=20)
                     
