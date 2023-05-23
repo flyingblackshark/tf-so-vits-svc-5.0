@@ -293,7 +293,7 @@ class SineGen(tf.keras.layers.Layer):
         output uv: tensor(batchsize=1, length, 1)
         """
        # with tf.no_gradient("Size"):
-        f0_buf = tf.zeros([f0.shape[0], f0.shape[1], self.dim],dtype=tf.float32).numpy()
+        f0_buf = tf.zeros([tf.shape(f0)[0], f0.shape[1], self.dim],dtype=tf.float32).numpy()
         # fundamental component
         f0_buf[:, :, 0] = f0[:, :, 0]
         for idx in np.arange(self.harmonic_num):
