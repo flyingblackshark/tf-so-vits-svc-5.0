@@ -43,7 +43,7 @@ class TextEncoder(tf.keras.layers.Layer):
         x = self.enc(x * x_mask, x_mask,training=training)
         stats = self.proj(x,training=training) * x_mask
         m, logs = tf.split(stats,2,axis=2)
-        z = (m + tf.random.normal(m.shape,dtype=tf.float32) * tf.exp(logs)) * x_mask
+        z = (m + tf.random.stateless_normal(shape=[-1,m.shape[1],m.shape[2]],seed=[1,2]) * tf.exp(logs)) * x_mask
         return z, m, logs, x_mask,x
 
 
@@ -124,7 +124,7 @@ class PosteriorEncoder(tf.keras.layers.Layer):
         x = self.enc(x, x_mask, g=g,training=training)
         stats = self.proj(x,training=training) * x_mask
         m, logs = tf.split(stats,[self.out_channels,self.out_channels],axis=2)
-        z = (m + tf.random.normal(m.shape,dtype=tf.float32) * tf.exp(logs)) * x_mask
+        z = (m + tf.random.stateless_normal([-1,m.shape[1],m.shape[2]],seed=[1,2]) * tf.exp(logs)) * x_mask
         return z, m, logs, x_mask
 
     # def remove_weight_norm(self):
@@ -140,7 +140,7 @@ class SynthesizerTrn(tf.keras.Model):
     ):
         super().__init__()
         self.segment_size = segment_size
-        self.emb_g = tf.keras.layers.Dense(hp.vits.gin_channels,input_shape=(hp.vits.spk_dim,),activation=None)
+        self.emb_g = tf.keras.layers.Dense(hp.vits.gin_channels)
         self.enc_p = TextEncoder(
             hp.vits.inter_channels,
             hp.vits.hidden_channels,
@@ -175,7 +175,8 @@ class SynthesizerTrn(tf.keras.Model):
 
     def call(self, ppg, pit, spec, spk, ppg_l, spec_l, training=False):
         #ppg = ppg + tf.random.normal(ppg.shape,dtype=tf.float32) * 0.0001
-        g = tf.expand_dims(self.emb_g(tf.keras.utils.normalize(spk),training=training),0)
+        g = tf.expand_dims(self.emb_g(spk,training=training),0)
+            #tf.linalg.normalize(spk,axis=-1),training=training),0)
         z_p, m_p, logs_p, ppg_mask,x = self.enc_p(
             ppg, ppg_l, f0=f0_to_coarse(pit),training=training)
         z_q, m_q, logs_q, spec_mask = self.enc_q(spec, spec_l, g=g,training=training)

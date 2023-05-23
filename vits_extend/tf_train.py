@@ -227,5 +227,5 @@ def train(rank, args, chkpt_path, hp, hp_str):
     )
     pit_list=tf.convert_to_tensor(pit_list)
     spk_list=tf.convert_to_tensor(spk_list)
-    cond_gan.fit([spe_list,wav_list,ppg_list,pit_list,spk_list],batch_size=1, epochs=20)
+    cond_gan.fit([spe_list,wav_list,ppg_list,pit_list,spk_list],batch_size=8, epochs=20)
                     
