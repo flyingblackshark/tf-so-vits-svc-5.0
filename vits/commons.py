@@ -1,4 +1,5 @@
 import tensorflow as tf
+import numpy as np
 # def clip_grad_value_(parameters, clip_value, norm_type=2):
 #     if isinstance(parameters, tf.Tensor):
 #         parameters = [parameters]
@@ -20,26 +21,29 @@ import tensorflow as tf
 #     input_tensor[tuple(position)] = value
 #     return input_tensor
 def slice_segments(x, ids_str, segment_size=4):
-    ret = tf.zeros_like(x[:, :segment_size, :]).numpy()
-    for i in range(x.shape[0]):
+    #ret = tf.zeros_like(x[:, :segment_size, :]).numpy()
+    ret = np.zeros((tf.shape(x)[0],segment_size,tf.shape[2]))
+    for i in range(tf.shape(x)[0]):
         idx_str = ids_str[i]
         idx_end = idx_str + segment_size
         ret[i] = x[i, idx_str:idx_end, :]
-    return ret
+    return tf.convert_to_tensor(ret)
 def slice_pitch_segments(x, ids_str, segment_size=4):
-    ret = tf.zeros_like(x[:, :segment_size]).numpy()
+    #ret = tf.zeros_like(x[:, :segment_size]).numpy()
+    ret = np.zeros((tf.shape(x)[0],segment_size))
     for i in range(x.shape[0]):
         idx_str = ids_str[i]
         idx_end = idx_str + segment_size
         ret[i] = x[i, idx_str:idx_end]
-    return ret
+        #ret.append(x[i, idx_str:idx_end])
+    return tf.convert_to_tensor(ret)
 def rand_slice_segments_with_pitch(x, pitch, x_lengths=None, segment_size=4):
-    b, d, t = x.shape[0],x.shape[1],x.shape[2]
+    b, d, t = tf.shape(x)[0],tf.shape(x)[1],tf.shape(x)[2]
 
     if x_lengths is None:
         x_lengths = t
     ids_str_max = x_lengths - segment_size + 1
-    ids_str = tf.cast((tf.random.uniform([b]) * ids_str_max),dtype=tf.int64)
+    ids_str = tf.cast((tf.random.stateless_uniform(shape=[b],seed=[1,2]) * ids_str_max),dtype=tf.int32)
     ret = slice_segments(x, ids_str, segment_size)
     ret_pitch = slice_pitch_segments(pitch, ids_str, segment_size)
     return ret, ret_pitch, ids_str

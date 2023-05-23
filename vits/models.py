@@ -43,7 +43,7 @@ class TextEncoder(tf.keras.layers.Layer):
         x = self.enc(x * x_mask, x_mask,training=training)
         stats = self.proj(x,training=training) * x_mask
         m, logs = tf.split(stats,2,axis=2)
-        z = (m + tf.random.stateless_normal(shape=[-1,m.shape[1],m.shape[2]],seed=[1,2]) * tf.exp(logs)) * x_mask
+        z = (m + tf.random.stateless_normal(shape=[tf.shape(m)[0],m.shape[1],m.shape[2]],seed=[1,2]) * tf.exp(logs)) * x_mask
         return z, m, logs, x_mask,x
 
 
@@ -124,7 +124,7 @@ class PosteriorEncoder(tf.keras.layers.Layer):
         x = self.enc(x, x_mask, g=g,training=training)
         stats = self.proj(x,training=training) * x_mask
         m, logs = tf.split(stats,[self.out_channels,self.out_channels],axis=2)
-        z = (m + tf.random.stateless_normal([-1,m.shape[1],m.shape[2]],seed=[1,2]) * tf.exp(logs)) * x_mask
+        z = (m + tf.random.stateless_normal([tf.shape(m)[0],m.shape[1],m.shape[2]],seed=[1,2]) * tf.exp(logs)) * x_mask
         return z, m, logs, x_mask
 
     # def remove_weight_norm(self):
