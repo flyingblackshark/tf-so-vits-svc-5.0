@@ -5,7 +5,7 @@ from vits.models import SynthesizerTrn
 from vits_decoder.discriminator import Discriminator
 from vits_extend.stft import TacotronSTFT
 from vits_extend.stft_loss import STFTLoss
-
+import tensorflow.experimental.numpy as tnp
 def read_tfrecord(example):
     feature=({
         "spe": tf.io.FixedLenFeature([], tf.string, default_value=''),
@@ -151,6 +151,7 @@ class GANModel(tf.keras.Model):
             # print("g %.04f m %.04f s %.04f d %.04f k %.04f r %.04f | step %d" % (
             #     loss_g, loss_m, loss_s, loss_d, loss_k, loss_r,step))
 def train(rank, args, chkpt_path, hp, hp_str):
+    
     #try TPU
     resolver = tf.distribute.cluster_resolver.TPUClusterResolver(tpu='')
     tf.config.experimental_connect_to_cluster(resolver)
@@ -161,7 +162,7 @@ def train(rank, args, chkpt_path, hp, hp_str):
     # tf.keras.mixed_precision.set_global_policy(policy)
     strategy = tf.distribute.TPUStrategy(resolver)
     tf.random.set_seed(hp.train.seed)
-    
+    tnp.experimental_enable_numpy_behavior()
     # train_dataset = strategy.distribute_datasets_from_function(
     # lambda _: get_dataset())
     with strategy.scope():

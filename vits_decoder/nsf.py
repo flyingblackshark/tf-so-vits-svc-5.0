@@ -1,6 +1,7 @@
 import tensorflow as tf
 import numpy as np
 import sys
+import tensorflow.experimental.numpy as tnp
 #import torch.nn.functional as torch_nn_func
 
 
@@ -230,8 +231,8 @@ class SineGen(tf.keras.layers.Layer):
 
         # initial phase noise (no noise for fundamental component)
         rand_ini = tf.random.uniform(
-            [f0_values.shape[0], f0_values.shape[2]],dtype=tf.float32
-        ).numpy()
+            [tf.shape(f0_values)[0], f0_values.shape[2]],dtype=tf.float32
+        )
         rand_ini[:, 0] = 0
         rad_values[:, 0, :] = rad_values[:, 0, :] + rand_ini
 
@@ -246,7 +247,7 @@ class SineGen(tf.keras.layers.Layer):
             tmp_over_one = tf.cumsum(rad_values, 1) % 1
             tmp_over_one_idx = (tmp_over_one[:, 1:, :] - tmp_over_one[:, :-1, :]) < 0
             tmp_over_one_idx = tf.cast(tmp_over_one_idx, tf.float32)
-            cumsum_shift = tf.zeros_like(rad_values).numpy()
+            cumsum_shift = tf.zeros_like(rad_values)
             cumsum_shift[:, 1:, :] = tmp_over_one_idx * -1.0
 
             sines = tf.sin(
@@ -293,7 +294,7 @@ class SineGen(tf.keras.layers.Layer):
         output uv: tensor(batchsize=1, length, 1)
         """
        # with tf.no_gradient("Size"):
-        f0_buf = tf.zeros([tf.shape(f0)[0], f0.shape[1], self.dim],dtype=tf.float32).numpy()
+        f0_buf = np.zeros((tf.shape(f0)[0], f0.shape[1], self.dim))
         # fundamental component
         f0_buf[:, :, 0] = f0[:, :, 0]
         for idx in np.arange(self.harmonic_num):
