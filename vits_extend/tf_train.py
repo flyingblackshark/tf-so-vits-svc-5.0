@@ -162,7 +162,7 @@ def train(rank, args, chkpt_path, hp, hp_str):
     # tf.keras.mixed_precision.set_global_policy(policy)
     strategy = tf.distribute.TPUStrategy(resolver)
     tf.random.set_seed(hp.train.seed)
-    tnp.experimental_enable_numpy_behavior()
+    #tnp.experimental_enable_numpy_behavior()
     # train_dataset = strategy.distribute_datasets_from_function(
     # lambda _: get_dataset())
     with strategy.scope():

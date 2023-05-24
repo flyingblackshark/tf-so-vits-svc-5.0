@@ -230,10 +230,19 @@ class SineGen(tf.keras.layers.Layer):
         rad_values = (f0_values / self.sampling_rate) % 1
 
         # initial phase noise (no noise for fundamental component)
-        rand_ini = tf.random.uniform(
-            [tf.shape(f0_values)[0], f0_values.shape[2]],dtype=tf.float32
+        rand_ini = tf.random.stateless_uniform(
+            [tf.shape(f0_values)[0], f0_values.shape[2]],seed=[1,2],dtype=tf.float32
         )
-        rand_ini[:, 0] = 0
+        rand_ini = tf.concat([tf.zeros([tf.shape(f0_values)[0],1]),rand_ini[:, 0:]],0)
+        #rand_ini[:, 0] = 0
+        #tf.assign(rand_ini[:, 0],0)
+        #rand_ini = tf.fill(rand_ini[:, 0], 0)
+        # indices = tf.constant([[4], [3], [1], [7]])
+        # updates = tf.constant([9, 10, 11, 12])
+        # rand_ini = tf.scatter_nd(indices,updates,rand_ini)
+        # temp1 = rand_ini[:,0:]
+        # temp2 = tf.zeros([tf.shape(rand_ini)[0],1],dtype=tf.float32)
+        # rand_ini = tf.concat(temp1,temp2)
         # update_indices = [(i,0) for i in range(tf.shape(f0_values)[0])]
         # update_value = [(0) for i in range(tf.shape(f0_values)[0])]
         # rand_ini = tf.tensor_scatter_nd_update(rand_ini, update_indices, update_value)
@@ -296,11 +305,15 @@ class SineGen(tf.keras.layers.Layer):
         output sine_tensor: tensor(batchsize=1, length, dim)
         output uv: tensor(batchsize=1, length, 1)
         """
-        f0_buf = tf.zeros([tf.shape(f0)[0], f0.shape[1], self.dim],dtype=tf.float32).numpy()
-        # fundamental component
-        f0_buf[:, :, 0] = f0[:, :, 0]
+        # f0_buf = tf.zeros([tf.shape(f0)[0], f0.shape[1], self.dim],dtype=tf.float32).numpy()
+        # # fundamental component
+        # f0_buf[:, :, 0] = f0[:, :, 0]
+        # for idx in np.arange(self.harmonic_num):
+        #      f0_buf[:, :, idx + 1]=f0_buf[:, :, 0] * (idx + 2)
+        f0_buf = tf.TensorArray(tf.float32, size=0, dynamic_size=True, clear_after_read=False)
         for idx in np.arange(self.harmonic_num):
-             f0_buf[:, :, idx + 1]=f0_buf[:, :, 0] * (idx + 2)
+             f0_buf.write(idx,f0[:, :, 0] * (idx + 2))
+        f0_buf = f0_buf.concat()
         # generate sine waveforms
         sine_waves = self._f02sine(f0_buf) * self.sine_amp
         sine_waves = tf.cast(sine_waves,tf.float32)

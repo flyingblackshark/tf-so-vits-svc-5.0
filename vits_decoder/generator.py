@@ -48,8 +48,8 @@ class SpeakerAdapter(tf.keras.layers.Layer):
 
 class Generator(tf.keras.layers.Layer):
     # this is our main BigVGAN model. Applies anti-aliased periodic activation for resblocks.
-    def __init__(self, hp,dynamic=None):
-        super(Generator, self).__init__(dynamic=dynamic)
+    def __init__(self, hp):
+        super(Generator, self).__init__()
         self.hp = hp
         self.num_kernels = len(hp.gen.resblock_kernel_sizes)
         self.num_upsamples = len(hp.gen.upsample_rates)
