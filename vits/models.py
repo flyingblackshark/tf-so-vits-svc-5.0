@@ -171,7 +171,7 @@ class SynthesizerTrn(tf.keras.Model):
             4,
             gin_channels=hp.vits.spk_dim
         )
-        self.dec = Generator(hp=hp)
+        self.dec = Generator(hp=hp,dynamic=True)
 
     def call(self, ppg, pit, spec, spk, ppg_l, spec_l, training=False):
         #ppg = ppg + tf.random.normal(ppg.shape,dtype=tf.float32) * 0.0001
@@ -227,7 +227,7 @@ class SynthesizerInfer(tf.keras.Model):
             4,
             gin_channels=hp.vits.spk_dim
         )
-        self.dec = Generator(hp=hp)
+        self.dec = Generator(hp=hp,dynamic=True)
 
     # def remove_weight_norm(self):
     #     self.flow.remove_weight_norm()

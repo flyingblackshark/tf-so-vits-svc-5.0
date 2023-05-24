@@ -187,6 +187,7 @@ def train(rank, args, chkpt_path, hp, hp_str):
             d_optimizer=d_optimizer,
             g_optimizer=g_optimizer,
             loss_fn=tf.keras.losses.BinaryCrossentropy(from_logits=True)
+         
         )
     dataset = get_dataset()
     test = dataset.as_numpy_iterator()

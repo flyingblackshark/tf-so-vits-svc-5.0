@@ -296,15 +296,11 @@ class SineGen(tf.keras.layers.Layer):
         output sine_tensor: tensor(batchsize=1, length, dim)
         output uv: tensor(batchsize=1, length, 1)
         """
-        f0_buf = tf.TensorArray(tf.float32, size=0, dynamic_size=True, clear_after_read=False)
-        # with tf.no_gradient("Size"):
-        # f0_buf = np.zeros([tf.shape(f0).numpy()[0], tf.shape(f0).numpy()[1], self.dim]).numpy()
-        # # fundamental component
-        # f0_buf[:, :, 0] = f0[:, :, 0]
+        f0_buf = tf.zeros([tf.shape(f0)[0], f0.shape[1], self.dim],dtype=tf.float32).numpy()
+        # fundamental component
+        f0_buf[:, :, 0] = f0[:, :, 0]
         for idx in np.arange(self.harmonic_num):
-            f0_buf.write(idx, f0[:, :, 0] * (idx + 2))
-        #     f0_buf[:, :, idx + 1]=f0_buf[:, :, 0] * (idx + 2)
-        f0_buf = f0_buf.concat()
+             f0_buf[:, :, idx + 1]=f0_buf[:, :, 0] * (idx + 2)
         # generate sine waveforms
         sine_waves = self._f02sine(f0_buf) * self.sine_amp
         sine_waves = tf.cast(sine_waves,tf.float32)
