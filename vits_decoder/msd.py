@@ -21,5 +21,5 @@ class ScaleDiscriminator(tf.keras.layers.Layer):
             fmap.append(x)
         x = self.conv_post(x)
         fmap.append(x)
-        x = tf.reshape(x,[x.shape[0],-1])
+        x = tf.reshape(x,[tf.shape(x)[0],-1])
         return [(fmap, x)]

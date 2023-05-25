@@ -36,7 +36,7 @@ class DiscriminatorP(tf.keras.layers.Layer):
             x = tf.pad(x, [(0,0),(0, n_pad),(0,0)], "reflect")
             t = t + n_pad
         #x = x.view(b, c, t // self.period, self.period)
-        x = tf.reshape(x, [b, c, t // self.period, self.period])
+        x = tf.reshape(x, [tf.shape(x)[0], c, t // self.period, self.period])
 
         for l in self.convs:
             x = l(x,training=training)
@@ -45,7 +45,7 @@ class DiscriminatorP(tf.keras.layers.Layer):
         x = self.conv_post(x,training=training)
         fmap.append(x)
         #x = torch.flatten(x, 1, -1)
-        x = tf.reshape(x,[x.shape[0],x.shape[1]*x.shape[2]])
+        x = tf.reshape(x,[tf.shape(x)[0],x.shape[1]*x.shape[2]])
         return fmap, x
 
 

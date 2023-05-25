@@ -117,7 +117,7 @@ class TacotronSTFT():
         """
         # assert(tf.reduce_min(y) >= -1)
         # assert(tf.reduce_max(y) <= 1)
-        paddings =  tf.constant([(0,0),(0,0),(0,0),
+        paddings =  tf.constant([(0,0),(0,0),
         (int((self.n_fft - self.hop_size) / 2), int((self.n_fft - self.hop_size) / 2))
         ])
         y = tf.squeeze(y,-1)
