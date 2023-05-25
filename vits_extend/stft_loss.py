@@ -32,7 +32,7 @@ def stft(x, fft_size, hop_size, win_length):
     # NOTE(kan-bayashi): clamp is needed to avoid nan or inf
     temp = tf.sqrt(tf.clip_by_value(real ** 2 + imag ** 2, clip_value_min=1e-7,clip_value_max=tf.float32.max))
     temp = tf.cast(temp,tf.float32)
-    return tf.transpose(temp,perm=[0,1,2])
+    return temp#tf.transpose(temp,perm=[0,1,2])
     
 
 

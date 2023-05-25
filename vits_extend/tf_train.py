@@ -88,7 +88,7 @@ class GANModel(tf.keras.Model):
                 audio = commons.slice_segments(
                     audio, ids_slice * self.hp.data.hop_length, self.hp.data.segment_size)  # slice
                 #spk_loss = vpr_loss(spk, spk_preds, tf.cast(spk_preds.size(0),tf.float32).fill_(1.0))
-
+                fake_audio = tf.expand_dims(fake_audio,1)
                 mel_fake = self.stft.mel_spectrogram(tf.expand_dims(fake_audio,1))
                 mel_real = self.stft.mel_spectrogram(tf.expand_dims(audio,1))
 

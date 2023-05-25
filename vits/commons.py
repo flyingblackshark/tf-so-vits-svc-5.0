@@ -44,6 +44,8 @@ def rand_slice_segments_with_pitch(x, pitch, x_lengths=None, segment_size=4):
     ids_str = tf.cast((tf.random.stateless_uniform(shape=[b],seed=[1,2]) * ids_str_max),dtype=tf.int32)
     ret = slice_segments(x, ids_str, segment_size)
     ret_pitch = slice_pitch_segments(pitch, ids_str, segment_size)
+    ret = tf.squeeze(ret,1)
+    ret_pitch = tf.squeeze(ret_pitch,1)
     return ret, ret_pitch, ids_str
 # def sequence_mask(length, max_length=None):
 #     if max_length is None:
