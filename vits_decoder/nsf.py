@@ -305,32 +305,33 @@ class SineGen(tf.keras.layers.Layer):
         output sine_tensor: tensor(batchsize=1, length, dim)
         output uv: tensor(batchsize=1, length, 1)
         """
-        # f0_buf = tf.zeros([tf.shape(f0)[0], f0.shape[1], self.dim],dtype=tf.float32).numpy()
-        # # fundamental component
-        # f0_buf[:, :, 0] = f0[:, :, 0]
-        # for idx in np.arange(self.harmonic_num):
-        #      f0_buf[:, :, idx + 1]=f0_buf[:, :, 0] * (idx + 2)
-        f0_buf = tf.TensorArray(tf.float32, size=0, dynamic_size=True, clear_after_read=False)
-        for idx in np.arange(self.harmonic_num):
-             f0_buf.write(idx,f0[:, :, 0] * (idx + 2))
-        f0_buf = f0_buf.concat()
-        # generate sine waveforms
-        sine_waves = self._f02sine(f0_buf) * self.sine_amp
-        sine_waves = tf.cast(sine_waves,tf.float32)
-        # generate uv signal
-        # uv = torch.ones(f0.shape)
-        # uv = uv * (f0 > self.voiced_threshold)
-        uv = self._f02uv(f0)
+        with tf.device('CPU:0'):
+            f0_buf = tf.Variable(tf.zeros([tf.shape(f0)[0], f0.shape[1], self.dim],dtype=tf.float32))
+            # fundamental component
+            f0_buf=f0_buf[:, :, 0].assign(f0[:, :, 0])
+            for idx in np.arange(self.harmonic_num):
+                f0_buf=f0_buf[:, :, idx + 1].assign(f0_buf[:, :, 0] * (idx + 2))
+            # f0_buf = tf.TensorArray(tf.float32, size=0, dynamic_size=True, clear_after_read=False)
+            # for idx in np.arange(self.harmonic_num):
+            #      f0_buf.write(idx,f0[:, :, 0] * (idx + 2))
+            # f0_buf = f0_buf.concat()
+            # generate sine waveforms
+            sine_waves = self._f02sine(f0_buf) * self.sine_amp
+            sine_waves = tf.cast(sine_waves,tf.float32)
+            # generate uv signal
+            # uv = torch.ones(f0.shape)
+            # uv = uv * (f0 > self.voiced_threshold)
+            uv = self._f02uv(f0)
 
-        # noise: for unvoiced should be similar to sine_amp
-        #        std = self.sine_amp/3 -> max value ~ self.sine_amp
-        # .       for voiced regions is self.noise_std
-        noise_amp = uv * self.noise_std + (1 - uv) * self.sine_amp / 3
-        noise = noise_amp * tf.random.normal(sine_waves.shape,dtype=tf.float32)
+            # noise: for unvoiced should be similar to sine_amp
+            #        std = self.sine_amp/3 -> max value ~ self.sine_amp
+            # .       for voiced regions is self.noise_std
+            noise_amp = uv * self.noise_std + (1 - uv) * self.sine_amp / 3
+            noise = noise_amp * tf.random.normal(sine_waves.shape,dtype=tf.float32)
 
-        # first: set the unvoiced part to 0 by uv
-        # then: additive noise
-        sine_waves = sine_waves * uv + noise
+            # first: set the unvoiced part to 0 by uv
+            # then: additive noise
+            sine_waves = sine_waves * uv + noise
         return sine_waves
 
 
