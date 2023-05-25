@@ -6,7 +6,7 @@ from vits.losses import fused_add_tanh_sigmoid_multiply
 class Flip(tf.keras.layers.Layer):
     def call(self, x, *args, reverse=False, **kwargs):   
         x = tf.reverse(x, [2])
-        logdet = tf.zeros([x.shape[0]])#.to(dtype=x.dtype, device=x.device)
+        logdet = tf.zeros([tf.shape(x)[0]])#.to(dtype=x.dtype, device=x.device)
         return x, logdet
 class WN(tf.keras.layers.Layer):
     def __init__(
@@ -162,7 +162,7 @@ class ResidualCouplingLayer(tf.keras.layers.Layer):
             x = tf.concat([x0, x1], 2)
             # speaker var to logdet
             logdet = tf.math.reduce_sum(logs * x_mask, [1, 2]) - tf.math.reduce_sum(
-               tf.broadcast_to(speaker_v,[speaker_v.shape[0],speaker_v.shape[1],logs.shape[-1]]) #speaker_v.expand(-1, -1, logs.shape[-1]) 
+               tf.broadcast_to(speaker_v,[tf.shape(speaker_v)[0],speaker_v.shape[1],logs.shape[-1]]) #speaker_v.expand(-1, -1, logs.shape[-1]) 
                 * x_mask, [1, 2])
             return x, logdet
         else:
@@ -172,7 +172,7 @@ class ResidualCouplingLayer(tf.keras.layers.Layer):
             x = tf.concat([x0, x1], 2)
             # speaker var to logdet
             logdet = tf.math.reduce_sum(logs * x_mask, [1, 2]) + tf.math.reduce_sum(
-              tf.broadcast_to(speaker_v,[speaker_v.shape[0],speaker_v.shape[1],logs.shape[-1]])  #speaker_v.expand(-1, -1, logs.shape[-1]) 
+              tf.broadcast_to(speaker_v,[tf.shape(speaker_v)[0],speaker_v.shape[1],logs.shape[-1]])  #speaker_v.expand(-1, -1, logs.shape[-1]) 
                 * x_mask, [1, 2])
             return x, logdet
 

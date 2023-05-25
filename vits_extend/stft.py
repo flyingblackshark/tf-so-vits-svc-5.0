@@ -115,8 +115,8 @@ class TacotronSTFT():
         -------
         mel_output: torch.FloatTensor of shape (B, n_mel_channels, T)
         """
-        assert(tf.reduce_min(y) >= -1)
-        assert(tf.reduce_max(y) <= 1)
+        # assert(tf.reduce_min(y) >= -1)
+        # assert(tf.reduce_max(y) <= 1)
         paddings =  tf.constant([(0,0),(0,0),
         (int((self.n_fft - self.hop_size) / 2), int((self.n_fft - self.hop_size) / 2))
         ])

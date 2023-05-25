@@ -60,7 +60,7 @@ class Generator(tf.keras.layers.Layer):
         # nsf
         #self.f0_upsamp = tf.keras.layers.UpSampling1D(size=3294)
            # size=np.prod(hp.gen.upsample_rates))
-        self.m_source = SourceModuleHnNSF(sampling_rate=hp.data.sampling_rate)
+        #self.m_source = SourceModuleHnNSF(sampling_rate=hp.data.sampling_rate)
         self.noise_convs = []#nn.ModuleList()
         # transposed conv-based upsamplers. does not apply anti-aliasing
         self.ups = []#nn.ModuleList()
@@ -122,26 +122,26 @@ class Generator(tf.keras.layers.Layer):
         # nsf
         f0 = f0[:,:, None]    
         #f0 =self.f0_upsamp(f0,training=training)
-        har_source = self.m_source(f0,training=training)
-        har_source = tf.transpose(har_source,[0,2,1])
+        #har_source = self.m_source(f0,training=training)
+        #har_source = tf.transpose(har_source,[0,2,1])
         
         x = self.conv_pre(x,training=training)
-    
-        for i in range(self.num_upsamples):
-            x = tf.keras.layers.LeakyReLU(0.1)(x)
-            # upsampling
-            x = self.ups[i](x,training=training)
-            # nsf
-            x_source = self.noise_convs[i](har_source,training=training)
-            x = x + x_source
-            # AMP blocks
-            xs = None
-            for j in range(self.num_kernels):
-                if xs is None:
-                    xs = self.resblocks[i * self.num_kernels + j](x,training=training)
-                else:
-                    xs += self.resblocks[i * self.num_kernels + j](x,training=training)
-            x = xs / self.num_kernels
+        # x = x.to_tensor()
+        # for i in range(self.num_upsamples):
+        #     x = tf.keras.layers.LeakyReLU(0.1)(x)
+        #     # upsampling
+        #     x = self.ups[i](x,training=training)
+        #     # nsf
+        #     #x_source = self.noise_convs[i](har_source,training=training)
+        #     #x = x + x_source
+        #     # AMP blocks
+        #     xs = None
+        #     for j in range(self.num_kernels):
+        #         if xs is None:
+        #             xs = self.resblocks[i * self.num_kernels + j](x,training=training)
+        #         else:
+        #             xs += self.resblocks[i * self.num_kernels + j](x,training=training)
+        #     x = xs / self.num_kernels
 
         # post conv
         x = tf.keras.layers.LeakyReLU(0.01)(x)
